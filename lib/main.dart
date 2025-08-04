@@ -67,19 +67,10 @@ class _SplashScreenState extends State<SplashScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Jiggle',
-                style: TextStyle(fontSize: 28),
+              Image.asset(
+                'jigle_logo.png',
+                width: 200,
+                height: 200,
               ),
             ],
           ),
@@ -106,12 +97,12 @@ class MainPage extends StatelessWidget {
           // 위치 선택 텍스트
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text("지그 창고 (or 샘플실)", style: TextStyle(fontSize: 18)),
+            child: Text("지그 창고 (진량공장 2층)", style: TextStyle(fontSize: 18)),
           ),
 
           // 예시 지그 항목
           JigItem(
-            image: "jig_photo.png",
+            image: "jig_example1.jpg",
             title: "LX3 진동&배광 지그 1대분",
             location: "품질동 2층 – 10분 전",
             price: "전장램프설계6팀 최은석 사원",
