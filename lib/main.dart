@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -8,187 +7,119 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Jiggle',
-      debugShowCheckedModeBanner: false,
-      home: const SplashScreen(),
+      title: 'Flutter Demo',
+      theme: ThemeData(
+        // This is the theme of your application.
+        //
+        // 이 라인 추가
+
+
+        // TRY THIS: Try running your application with "flutter run". You'll see
+        // the application has a purple toolbar. Then, without quitting the app,
+        // try changing the seedColor in the colorScheme below to Colors.green
+        // and then invoke "hot reload" (save your changes or press the "hot
+        // reload" button in a Flutter-supported IDE, or press "r" if you used
+        // the command line to start the app).
+        //
+        // Notice that the counter didn't reset back to zero; the application
+        // state is not lost during the reload. To reset the state, use hot
+        // restart instead.
+        //
+        // This works for code too, not just values: Most code changes can be
+        // tested with just a hot reload.
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      ),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-// 스플래시 화면
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key, required this.title});
+
+  // This widget is the home page of your application. It is stateful, meaning
+  // that it has a State object (defined below) that contains fields that affect
+  // how it looks.
+
+  // This class is the configuration for the state. It holds the values (in this
+  // case the title) provided by the parent (in this case the App widget) and
+  // used by the build method of the State. Fields in a Widget subclass are
+  // always marked "final".
+
+  final String title;
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
+class _MyHomePageState extends State<MyHomePage> {
+  int _counter = 0;
 
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-
-    _animation = Tween<double>(begin: 0.9, end: 1.1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-
-    Timer(const Duration(seconds: 2), () {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainPage()),
-      );
+  void _incrementCounter() {
+    setState(() {
+      // This call to setState tells the Flutter framework that something has
+      // changed in this State, which causes it to rerun the build method below
+      // so that the display can reflect the updated values. If we changed
+      // _counter without calling setState(), then the build method would not be
+      // called again, and so nothing would appear to happen.
+      _counter++;
     });
   }
 
   @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: ScaleTransition(
-          scale: _animation,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Jiggle',
-                style: TextStyle(fontSize: 28),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// 메인화면
-class MainPage extends StatelessWidget {
-  const MainPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
+    // This method is rerun every time setState is called, for instance as done
+    // by the _incrementCounter method above.
+    //
+    // The Flutter framework has been optimized to make rerunning build methods
+    // fast, so that you can just rebuild anything that needs updating rather
+    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        title: Text("Jiggle App"),
-        backgroundColor: Colors.blue,
+        // TRY THIS: Try changing the color here to a specific color (to
+        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
+        // change color while the other colors stay the same.
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        // Here we take the value from the MyHomePage object that was created by
+        // the App.build method, and use it to set our appbar title.
+        title: Text(widget.title),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(10),
-        children: [
-          // 위치 선택 텍스트
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text("지그 창고 (or 샘플실)", style: TextStyle(fontSize: 18)),
-          ),
-
-          // 예시 지그 항목
-          JigItem(
-            image: "jig_photo.png",
-            title: "LX3 진동&배광 지그 1대분",
-            location: "품질동 2층 – 10분 전",
-            price: "전장램프설계6팀 최은석 사원",
-            likes: 0,
-          ),
-
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton(
-              onPressed: () {},
-              child: const Text("+ 지그 등록"),
+      body: Center(
+        // Center is a layout widget. It takes a single child and positions it
+        // in the middle of the parent.
+        child: Column(
+          // Column is also a layout widget. It takes a list of children and
+          // arranges them vertically. By default, it sizes itself to fit its
+          // children horizontally, and tries to be as tall as its parent.
+          //
+          // Column has various properties to control how it sizes itself and
+          // how it positions its children. Here we use mainAxisAlignment to
+          // center the children vertically; the main axis here is the vertical
+          // axis because Columns are vertical (the cross axis would be
+          // horizontal).
+          //
+          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
+          // action in the IDE, or press "p" in the console), to see the
+          // wireframe for each widget.
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            const Text('You have pushed the button this many times:'),
+            Text(
+              '$_counter',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "나의 지그"),
-        ],
-      ),
-    );
-  }
-}
-
-// 지그 항목 위젯
-class JigItem extends StatelessWidget {
-  final String image;
-  final String title;
-  final String location;
-  final String price;
-  final int likes;
-
-  const JigItem({
-    super.key,
-    required this.image,
-    required this.title,
-    required this.location,
-    required this.price,
-    this.likes = 0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Image.asset(image, width: 100, height: 100, fit: BoxFit.cover),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(location),
-                Text(price),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    const Icon(Icons.favorite, size: 16, color: Colors.red),
-                    const SizedBox(width: 4),
-                    Text('$likes'),
-                  ],
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _incrementCounter,
+        tooltip: 'Increment',
+        child: const Icon(Icons.add),
+      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
