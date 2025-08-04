@@ -14,7 +14,7 @@ class MyApp extends StatelessWidget {
       title: 'Jigle',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: 'Pretendard',
+        fontFamily: 'Pretendard-M',
       ),
       home: const SplashScreen(),
     );
