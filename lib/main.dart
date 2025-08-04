@@ -88,7 +88,7 @@ class MainPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Jiggle"),
+        title: Text("Jigle"),
         backgroundColor: Colors.blue,
       ),
       body: ListView(
