@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../my_jig_screen/my_jig_screen.dart';
-import '../my_jig_screen/my_sample_screen.dart';
-import '../my_jig_screen/warehouse_screen.dart';
-import '../my_jig_screen/admin_screen.dart';
-import '../my_jig_screen/favorite_screen.dart';
-import '../my_jig_screen/recent_screen.dart';
-import '../my_jig_screen/event_screen.dart';
+import '../my_jig_page/my_jig_screen.dart';
+import '../my_jig_page/my_sample_screen.dart';
+import '../my_jig_page/warehouse_screen.dart';
+import '../my_jig_page/admin_screen.dart';
+import '../my_jig_page/favorite_screen.dart';
+import '../my_jig_page/recent_screen.dart';
+import '../my_jig_page/event_screen.dart';
 
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({super.key});
