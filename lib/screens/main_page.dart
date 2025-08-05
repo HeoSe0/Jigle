@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../widgets/jig_item.dart';
 import '../widgets/jig_form_bottom_sheet.dart';
 import '../jig_item_data.dart';
+import '../screens/map_page.dart';         // 추가
+import '../screens/my_jigs_page.dart';    // 추가
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -19,7 +21,8 @@ class _MainPageState extends State<MainPage> {
       description: "LX3 진동&배광 지그",
       registrant: "전장램프설계6팀 최은석 사원",
     )
-  ]; // 초기 jig list
+  ];
+
   String selectedLocation = '진량공장 2층';
   int selectedTab = 0;
 
@@ -64,6 +67,55 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  // ✅ 각 탭에 따라 body를 바꿔주는 함수
+  Widget getBody() {
+    switch (selectedTab) {
+      case 0:
+        return ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: jigItems.length,
+          itemBuilder: (context, index) {
+            final item = jigItems[index];
+            if (item.location != selectedLocation) return const SizedBox.shrink();
+            return Stack(
+              children: [
+                JigItem(
+                  image: item.image,
+                  title: item.title,
+                  location: item.location,
+                  price: item.description,
+                  registrant: item.registrant,
+                  likes: item.likes,
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.black),
+                        onPressed: () => _showAddOrEditJigDialog(editItem: item, editIndex: index),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.black),
+                        onPressed: () => _confirmDelete(index),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      case 1:
+        return const MapPage();
+      case 2:
+        return const MyJigsPage();
+      default:
+        return const Center(child: Text("페이지 없음"));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,51 +138,18 @@ class _MainPageState extends State<MainPage> {
           ],
         ),
         backgroundColor: Colors.blue.shade200,
-      ), // 위치 선택 및 PopupMenu
-      body: ListView.builder(
-        padding: const EdgeInsets.all(10),
-        itemCount: jigItems.length,
-        itemBuilder: (context, index) {
-          final item = jigItems[index];
-          if (item.location != selectedLocation) return const SizedBox.shrink();
-          return Stack(
-            children: [
-              JigItem(
-                image: item.image,
-                title: item.title,
-                location: item.location,
-                price: item.description,
-                registrant: item.registrant,
-                likes: item.likes,
-              ),
-              Positioned(
-                top: 0,
-                right: 0,
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.black),
-                      onPressed: () => _showAddOrEditJigDialog(editItem: item, editIndex: index),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.black),
-                      onPressed: () => _confirmDelete(index),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ), // jigItems 리스트 출력
+      ),
+      body: getBody(), // ✅ 탭에 따라 화면 전환
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white, // ✅ 흰색 배경 추가
+        backgroundColor: Colors.white,
         currentIndex: selectedTab,
         onTap: (index) {
           setState(() {
             selectedTab = index;
           });
         },
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
