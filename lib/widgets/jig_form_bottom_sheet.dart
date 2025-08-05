@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import '../jig_item_data.dart';
+import 'jig_item_data.dart';
 
 class JigFormBottomSheet extends StatefulWidget {
   final JigItemData? editItem;
   final Function(JigItemData) onSubmit;
 
-  const JigFormBottomSheet({
-    super.key,
-    this.editItem,
-    required this.onSubmit,
-  });
+  const JigFormBottomSheet({super.key, this.editItem, required this.onSubmit});
 
   @override
   State<JigFormBottomSheet> createState() => _JigFormBottomSheetState();
@@ -27,8 +23,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   void initState() {
     super.initState();
     titleController = TextEditingController(text: widget.editItem?.title ?? '');
-    descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
-    registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
+    descriptionController = TextEditingController(
+      text: widget.editItem?.description ?? '',
+    );
+    registrantController = TextEditingController(
+      text: widget.editItem?.registrant ?? '',
+    );
     location = widget.editItem?.location ?? location;
   }
 
@@ -46,7 +46,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       title: titleController.text,
       location: location,
       description:
-      "${startDate?.toLocal().toString().split(' ')[0]} ~ ${endDate?.toLocal().toString().split(' ')[0]}\n${descriptionController.text}",
+          "${startDate?.toLocal().toString().split(' ')[0]} ~ ${endDate?.toLocal().toString().split(' ')[0]}\n${descriptionController.text}",
       registrant: registrantController.text,
     );
     widget.onSubmit(newJig);
@@ -57,7 +57,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       color: Colors.white, // ✅ 전체 배경 흰색
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -94,7 +96,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 return ChoiceChip(
                   label: Text(
                     place,
-                    style: TextStyle(color: isSelected ? Colors.white : Colors.black),
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.black,
+                    ),
                   ),
                   selected: isSelected,
                   selectedColor: Colors.blue,
@@ -109,7 +113,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
             Row(
               children: [
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                  ),
                   onPressed: () async {
                     final picked = await showDatePicker(
                       context: context,
@@ -128,7 +134,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                  ),
                   onPressed: () async {
                     final picked = await showDatePicker(
                       context: context,

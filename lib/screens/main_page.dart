@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../widgets/jig_item.dart';
 import '../widgets/jig_form_bottom_sheet.dart';
-import '../jig_item_data.dart';
-import '../screens/map_page.dart';         // 추가
-import '../screens/my_jigs_page.dart';    // 추가
+import '../widgets/jig_item_data.dart';
+import '../screens/map_page.dart'; // 추가
+import '../screens/my_jigs_page.dart'; // 추가
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -20,7 +20,7 @@ class _MainPageState extends State<MainPage> {
       location: "진량공장 2층",
       description: "LX3 진동&배광 지그",
       registrant: "전장램프설계6팀 최은석 사원",
-    )
+    ),
   ];
 
   String selectedLocation = '진량공장 2층';
@@ -54,7 +54,10 @@ class _MainPageState extends State<MainPage> {
         backgroundColor: Colors.white,
         title: const Text("삭제하시겠습니까?", style: TextStyle(color: Colors.black)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("아니오")),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text("아니오"),
+          ),
           TextButton(
             onPressed: () {
               setState(() => jigItems.removeAt(index));
@@ -76,7 +79,8 @@ class _MainPageState extends State<MainPage> {
           itemCount: jigItems.length,
           itemBuilder: (context, index) {
             final item = jigItems[index];
-            if (item.location != selectedLocation) return const SizedBox.shrink();
+            if (item.location != selectedLocation)
+              return const SizedBox.shrink();
             return Stack(
               children: [
                 JigItem(
@@ -94,7 +98,10 @@ class _MainPageState extends State<MainPage> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.edit, color: Colors.black),
-                        onPressed: () => _showAddOrEditJigDialog(editItem: item, editIndex: index),
+                        onPressed: () => _showAddOrEditJigDialog(
+                          editItem: item,
+                          editIndex: index,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.close, color: Colors.black),
@@ -124,12 +131,12 @@ class _MainPageState extends State<MainPage> {
         backgroundColor: Colors.blue.shade200, // 상단 바 색 (원래대로 유지)
         title: Row(
           children: [
-            Text(
-              selectedLocation,
-              style: const TextStyle(color: Colors.black),
-            ),
+            Text(selectedLocation, style: const TextStyle(color: Colors.black)),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black), // 아이콘 색도 맞춤
+              icon: const Icon(
+                Icons.keyboard_arrow_down,
+                color: Colors.black,
+              ), // 아이콘 색도 맞춤
               color: Colors.white, // ✅ 팝업 배경 흰색
               onSelected: (String value) {
                 setState(() => selectedLocation = value);
@@ -177,9 +184,9 @@ class _MainPageState extends State<MainPage> {
       ),
       floatingActionButton: selectedTab == 0
           ? OutlinedButton(
-        onPressed: () => _showAddOrEditJigDialog(),
-        child: const Text("+ 지그 등록"),
-      )
+              onPressed: () => _showAddOrEditJigDialog(),
+              child: const Text("+ 지그 등록"),
+            )
           : null,
     );
   }
