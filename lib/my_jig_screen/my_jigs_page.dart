@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'my_jig_screen.dart';
+import '../screens/my_jig_page.dart';
 import 'my_sample_screen.dart';
 import 'warehouse_screen.dart';
 import 'admin_screen.dart';
