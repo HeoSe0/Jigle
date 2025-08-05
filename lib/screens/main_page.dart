@@ -121,23 +121,42 @@ class _MainPageState extends State<MainPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.blue.shade200, // 상단 바 색 (원래대로 유지)
         title: Row(
           children: [
-            Text(selectedLocation),
+            Text(
+              selectedLocation,
+              style: const TextStyle(color: Colors.black),
+            ),
             PopupMenuButton<String>(
-              icon: const Icon(Icons.keyboard_arrow_down),
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black), // 아이콘 색도 맞춤
+              color: Colors.white, // ✅ 팝업 배경 흰색
               onSelected: (String value) {
                 setState(() => selectedLocation = value);
               },
-              itemBuilder: (BuildContext context) => const [
-                PopupMenuItem(value: '진량공장 2층', child: Text('진량공장 2층')),
-                PopupMenuItem(value: '배광실 2층', child: Text('배광실 2층')),
-                PopupMenuItem(value: '본관 4층', child: Text('본관 4층')),
+              itemBuilder: (BuildContext context) => [
+                const PopupMenuItem(
+                  value: '진량공장 2층',
+                  child: Text('진량공장 2층'),
+                  textStyle: TextStyle(color: Colors.black), // ✅ 글자색 검정
+                  height: 40,
+                ),
+                const PopupMenuItem(
+                  value: '배광실 2층',
+                  child: Text('배광실 2층'),
+                  textStyle: TextStyle(color: Colors.black),
+                  height: 40,
+                ),
+                const PopupMenuItem(
+                  value: '본관 4층',
+                  child: Text('본관 4층'),
+                  textStyle: TextStyle(color: Colors.black),
+                  height: 40,
+                ),
               ],
             ),
           ],
         ),
-        backgroundColor: Colors.blue.shade200,
       ),
       body: getBody(), // ✅ 탭에 따라 화면 전환
       bottomNavigationBar: BottomNavigationBar(
