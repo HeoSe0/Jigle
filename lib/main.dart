@@ -90,9 +90,10 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Jigle"),
-        backgroundColor: Colors.blue,
+        title: const Text("Jigle"),
+        backgroundColor: Colors.blue.shade200,
       ),
       body: ListView(
         padding: const EdgeInsets.all(10),
@@ -100,7 +101,33 @@ class MainPage extends StatelessWidget {
           // 위치 선택 텍스트
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text("지그 창고 (진량공장 2층)", style: TextStyle(fontSize: 18)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("지그 창고 (진량공장 2층)", style: TextStyle(fontSize: 18)),
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.keyboard_arrow_up),
+                  color: Colors.white,
+                  onSelected: (String selectedLocation) {
+                    print('선택한 장소: $selectedLocation');
+                  },
+                  itemBuilder: (BuildContext context) => const [
+                    PopupMenuItem(
+                      value: '진량공장 2층',
+                      child: Text('진량공장 2층'),
+                    ),
+                    PopupMenuItem(
+                      value: '배광실 2층',
+                      child: Text('배광실 2층'),
+                    ),
+                    PopupMenuItem(
+                      value: '본관 4층',
+                      child: Text('본관 4층'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
 
           // 예시 지그 항목
@@ -114,20 +141,35 @@ class MainPage extends StatelessWidget {
 
           Align(
             alignment: Alignment.centerRight,
-            child: ElevatedButton(
+            child: OutlinedButton(
               onPressed: () {},
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+              ),
               child: const Text("+ 지그 등록"),
             ),
           ),
         ],
       ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
-          BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "나의 지그"),
-        ],
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Colors.black, width: 0.5), // 얇은 검정 테두리
+          ),
+        ),
+        child: BottomNavigationBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedItemColor: Colors.black,
+          unselectedItemColor: Colors.grey,
+          items: [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
+            BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
+            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "나의 지그"),
+          ],
+        ),
       ),
     );
   }
