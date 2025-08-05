@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'jig_item_data.dart';
 
 void main() {
   runApp(const MyApp());
@@ -77,23 +78,10 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class JigItemData {
-  final String image;
-  final String title;
-  final String location;
-  final String description;
-  final String registrant;
-  final int likes;
 
-  JigItemData({
-    required this.image,
-    required this.title,
-    required this.location,
-    required this.description,
-    required this.registrant,
-    this.likes = 0,
-  });
-}
+
+
+
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -114,14 +102,15 @@ class _MainPageState extends State<MainPage> {
   ];
 
   String selectedLocation = '진량공장 2층';
+  int selectedTab = 0; // 0: 홈
 
-  void _showAddJigDialog() {
-    String title = '';
-    String description = '';
-    String registrant = '';
+  void _showAddOrEditJigDialog({JigItemData? editItem, int? editIndex}) {
+    String title = editItem?.title ?? '';
+    String description = editItem?.description ?? '';
+    String registrant = editItem?.registrant ?? '';
     DateTime? startDate;
     DateTime? endDate;
-    String currentLocation = selectedLocation;
+    String locationForJig = editItem?.location ?? selectedLocation;
 
     showModalBottomSheet(
       context: context,
@@ -131,112 +120,136 @@ class _MainPageState extends State<MainPage> {
         return Padding(
           padding: EdgeInsets.only(
               bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.black),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Text("지그 등록", style: TextStyle(fontSize: 18, color: Colors.black)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                  onPressed: () {},
-                  child: const Text("사진 추가", style: TextStyle(color: Colors.black)),
-                ),
-                const SizedBox(height: 10),
-                const Text("제목", style: TextStyle(color: Colors.black)),
-                TextField(
-                  onChanged: (value) => title = value,
-                ),
-                const SizedBox(height: 10),
-                const Text("자세한 설명", style: TextStyle(color: Colors.black)),
-                TextField(
-                  maxLines: 3,
-                  onChanged: (value) => description = value,
-                ),
-                const SizedBox(height: 10),
-                const Text("등록자", style: TextStyle(color: Colors.black)),
-                TextField(
-                  onChanged: (value) => registrant = value,
-                ),
-                const SizedBox(height: 10),
-                const Text("보관기한", style: TextStyle(color: Colors.black)),
-                Row(
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() => startDate = picked);
-                        }
-                      },
-                      child: Text(
-                        startDate == null
-                            ? '보관날짜'
-                            : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
-                        style: const TextStyle(color: Colors.black),
+          child: StatefulBuilder(
+            builder: (context, setModalState) => SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.black),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime(2100),
-                        );
-                        if (picked != null) {
-                          setState(() => endDate = picked);
-                        }
-                      },
-                      child: Text(
-                        endDate == null
-                            ? '폐기날짜'
-                            : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
-                        style: const TextStyle(color: Colors.black),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.lightBlueAccent,
-                    minimumSize: const Size.fromHeight(40),
+                      Text(editItem == null ? "지그 등록" : "지그 수정",
+                          style: const TextStyle(fontSize: 18, color: Colors.black)),
+                    ],
                   ),
-                  onPressed: () {
-                    setState(() {
-                      jigItems.add(JigItemData(
-                        image: "jig_example1.jpg",
-                        title: title,
-                        location: currentLocation,
-                        description:
-                        "${startDate?.toLocal()} ~ ${endDate?.toLocal()}\n$description",
-                        registrant: registrant,
-                      ));
-                    });
-                    Navigator.pop(context);
-                  },
-                  child: const Text("작성 완료", style: TextStyle(color: Colors.white)),
-                ),
-              ],
+                  const SizedBox(height: 10),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                    onPressed: () {},
+                    child: const Text("사진 추가", style: TextStyle(color: Colors.black)),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text("제목", style: TextStyle(color: Colors.black)),
+                  TextField(onChanged: (value) => title = value, controller: TextEditingController(text: title)),
+                  const SizedBox(height: 10),
+                  const Text("자세한 설명", style: TextStyle(color: Colors.black)),
+                  TextField(
+                    maxLines: 3,
+                    onChanged: (value) => description = value,
+                    controller: TextEditingController(text: description),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text("등록자", style: TextStyle(color: Colors.black)),
+                  TextField(onChanged: (value) => registrant = value, controller: TextEditingController(text: registrant)),
+                  const SizedBox(height: 10),
+                  const Text("보관장소", style: TextStyle(color: Colors.black)),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      '진량공장 2층', '배광실 2층', '본관 4층'
+                    ].map((place) {
+                      final isSelected = locationForJig == place;
+                      return ChoiceChip(
+                        label: Text(place, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+                        selected: isSelected,
+                        selectedColor: Colors.blue,
+                        backgroundColor: Colors.white,
+                        onSelected: (_) => setModalState(() => locationForJig = place),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text("보관기한", style: TextStyle(color: Colors.black)),
+                  Row(
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setModalState(() => startDate = picked);
+                          }
+                        },
+                        child: Text(
+                          startDate == null ? '보관날짜' : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime(2020),
+                            lastDate: DateTime(2100),
+                          );
+                          if (picked != null) {
+                            setModalState(() => endDate = picked);
+                          }
+                        },
+                        child: Text(
+                          endDate == null ? '폐기날짜' : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.lightBlueAccent,
+                      minimumSize: const Size.fromHeight(40),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        selectedLocation = locationForJig;
+                        if (editItem != null && editIndex != null) {
+                          jigItems[editIndex] = JigItemData(
+                            image: "jig_example1.jpg",
+                            title: title,
+                            location: locationForJig,
+                            description: "${startDate?.toLocal().toString().split(' ')[0]} ~ ${endDate?.toLocal().toString().split(' ')[0]}\n$description",
+                            registrant: registrant,
+                          );
+                        } else {
+                          jigItems.add(JigItemData(
+                            image: "jig_example1.jpg",
+                            title: title,
+                            location: locationForJig,
+                            description: "${startDate?.toLocal()} ~ ${endDate?.toLocal()}\n$description",
+                            registrant: registrant,
+                          ));
+                        }
+                      });
+                      Navigator.pop(context);
+                    },
+                    child: Text(editItem == null ? "작성 완료" : "수정 완료",
+                        style: const TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -280,9 +293,7 @@ class _MainPageState extends State<MainPage> {
             PopupMenuButton<String>(
               icon: const Icon(Icons.keyboard_arrow_down),
               onSelected: (String value) {
-                setState(() {
-                  selectedLocation = value;
-                });
+                setState(() => selectedLocation = value);
               },
               itemBuilder: (BuildContext context) => const [
                 PopupMenuItem(value: '진량공장 2층', child: Text('진량공장 2층')),
@@ -311,40 +322,49 @@ class _MainPageState extends State<MainPage> {
                 likes: item.likes,
               ),
               Positioned(
+                top: 0,
                 right: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.close, color: Colors.black),
-                  onPressed: () => _confirmDelete(index),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.black),
+                      onPressed: () => _showAddOrEditJigDialog(editItem: item, editIndex: index),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.black),
+                      onPressed: () => _confirmDelete(index),
+                    ),
+                  ],
                 ),
-              )
+              ),
             ],
           );
         },
       ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Colors.black, width: 0.5),
-          ),
-        ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          selectedItemColor: Colors.black,
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
-            BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: "나의 지그"),
-          ],
-        ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: selectedTab,
+        onTap: (index) {
+          setState(() {
+            selectedTab = index;
+          });
+        },
+        backgroundColor: Colors.white,
+        elevation: 0,
+        selectedItemColor: Colors.black,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
+          BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: "나의 지그"),
+        ],
       ),
-      floatingActionButton: OutlinedButton(
-        onPressed: _showAddJigDialog,
+      floatingActionButton: selectedTab == 0
+          ? OutlinedButton(
+        onPressed: () => _showAddOrEditJigDialog(),
         style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
         child: const Text("+ 지그 등록"),
-      ),
+      )
+          : null,
     );
   }
 }
