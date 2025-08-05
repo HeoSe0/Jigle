@@ -6,7 +6,9 @@ class WarehouseScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: const Text('창고 현황'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

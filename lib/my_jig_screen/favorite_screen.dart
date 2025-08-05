@@ -6,7 +6,9 @@ class FavoriteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('관심목록')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: const Text('관심목록'),
+        backgroundColor: Colors.white,),
       body: const Center(child: Text('관심목록 화면')),
     );
   }

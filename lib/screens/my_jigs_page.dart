@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../screens/my_jig_page.dart';
-import 'my_sample_screen.dart';
-import 'warehouse_screen.dart';
-import 'admin_screen.dart';
-import 'favorite_screen.dart';
-import 'recent_screen.dart';
-import 'event_screen.dart';
+import '../my_jig_screen/my_jig_screen.dart';
+import '../my_jig_screen/my_sample_screen.dart';
+import '../my_jig_screen/warehouse_screen.dart';
+import '../my_jig_screen/admin_screen.dart';
+import '../my_jig_screen/favorite_screen.dart';
+import '../my_jig_screen/recent_screen.dart';
+import '../my_jig_screen/event_screen.dart';
 
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({super.key});
@@ -13,6 +13,7 @@ class MyJigsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [

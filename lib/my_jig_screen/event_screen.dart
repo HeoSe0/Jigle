@@ -6,7 +6,9 @@ class EventScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('이벤트')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: const Text('이벤트'),
+        backgroundColor: Colors.white,),
       body: const Center(child: Text('이벤트 화면')),
     );
   }

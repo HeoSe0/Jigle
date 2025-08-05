@@ -6,7 +6,9 @@ class AdminScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: const Text('관리자 설정'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),

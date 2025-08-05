@@ -3,7 +3,7 @@ import '../widgets/jig_item.dart';
 import '../widgets/jig_form_bottom_sheet.dart';
 import '../widgets/jig_item_data.dart';
 import '../screens/map_page.dart'; // 추가
-import '../my_jig_screen/my_jigs_page.dart'; // 추가
+import 'my_jigs_page.dart'; // 추가
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});

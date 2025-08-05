@@ -6,7 +6,9 @@ class MyJigScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.white,
         title: const Text('나의 지그'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
