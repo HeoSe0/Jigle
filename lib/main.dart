@@ -96,8 +96,8 @@ class _MainPageState extends State<MainPage> {
       image: "jig_example1.jpg",
       title: "LX3 진동&배광 지그 1대분",
       location: "진량공장 2층",
-      description: "전장램프설계6팀 최은석 사원",
-      registrant: "최은석",
+      description: "LX3 진동&배광 지그",
+      registrant: "전장램프설계6팀 최은석 사원",
     )
   ];
 
