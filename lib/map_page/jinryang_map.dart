@@ -9,7 +9,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
     required double top,
     required double width,
     required double height,
-    required Color color, // <- 현재는 무시되지만 남겨둠
+    required Color color, // 사용되지 않지만 구조상 남겨둠
     required String label,
   }) {
     return Positioned(
@@ -36,91 +36,99 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
       builder: (context, constraints) {
         final scaleX = constraints.maxWidth / imageOriginalWidth;
         final scaleY = constraints.maxHeight / imageOriginalHeight;
+        final scale = scaleX < scaleY ? scaleX : scaleY;
 
-        double sx(double val) => val * scaleX;
-        double sy(double val) => val * scaleY;
+        double s(double val) => val * scale;
 
         return Stack(
           children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/maps/main_map.png',
-                fit: BoxFit.contain,
-                alignment: Alignment.center,
+            Positioned(
+              left: (constraints.maxWidth - imageOriginalWidth * scale) / 2,
+              top: (constraints.maxHeight - imageOriginalHeight * scale) / 2,
+              width: imageOriginalWidth * scale,
+              height: imageOriginalHeight * scale,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/maps/main_map.png',
+                      fit: BoxFit.fill,
+                    ),
+                  ),
+                  buildBox(
+                    left: s(280),
+                    top: s(304),
+                    width: s(191),
+                    height: s(177),
+                    color: Colors.blue,
+                    label: '진량공장 A동',
+                  ),
+                  buildBox(
+                    left: s(281),
+                    top: s(67),
+                    width: s(191),
+                    height: s(208),
+                    color: Colors.orange,
+                    label: '진량공장 B동',
+                  ),
+                  buildBox(
+                    left: s(75),
+                    top: s(215),
+                    width: s(178),
+                    height: s(115),
+                    color: Colors.green,
+                    label: '생산기술센터',
+                  ),
+                  buildBox(
+                    left: s(60),
+                    top: s(80),
+                    width: s(173),
+                    height: s(60),
+                    color: Colors.purple,
+                    label: 'ADAS',
+                  ),
+                  buildBox(
+                    left: s(495),
+                    top: s(70),
+                    width: s(32),
+                    height: s(152),
+                    color: Colors.teal,
+                    label: '중앙시험동',
+                  ),
+                  buildBox(
+                    left: s(355),
+                    top: s(510),
+                    width: s(80),
+                    height: s(42),
+                    color: Colors.red,
+                    label: '본관',
+                  ),
+                  buildBox(
+                    left: s(255),
+                    top: s(510),
+                    width: s(82),
+                    height: s(42),
+                    color: Colors.indigo,
+                    label: '후생동',
+                  ),
+                  buildBox(
+                    left: s(212),
+                    top: s(477),
+                    width: s(35),
+                    height: s(75),
+                    color: Colors.grey,
+                    label: '신관',
+                  ),
+                  buildBox(
+                    left: s(142),
+                    top: s(45),
+                    width: s(100),
+                    height: s(33),
+                    color: Colors.brown,
+                    label: '배광시험동',
+                  ),
+                ],
               ),
-            ),
-            // 박스들 (테두리는 모두 투명)
-            buildBox(
-              left: sx(300),
-              top: sy(304),
-              width: sx(136),
-              height: sy(175),
-              color: Colors.blue,
-              label: '진량공장 A동',
-            ),
-            buildBox(
-              left: sx(302),
-              top: sy(67),
-              width: sx(133),
-              height: sy(208),
-              color: Colors.orange,
-              label: '진량공장 B동',
-            ),
-            buildBox(
-              left: sx(157),
-              top: sy(215),
-              width: sx(123),
-              height: sy(115),
-              color: Colors.green,
-              label: '생산기술센터',
-            ),
-            buildBox(
-              left: sx(147),
-              top: sy(80),
-              width: sx(120),
-              height: sy(60),
-              color: Colors.purple,
-              label: 'ADAS',
-            ),
-            buildBox(
-              left: sx(452),
-              top: sy(70),
-              width: sx(24),
-              height: sy(152),
-              color: Colors.teal,
-              label: '중앙시험동',
-            ),
-            buildBox(
-              left: sx(353),
-              top: sy(510),
-              width: sx(58),
-              height: sy(42),
-              color: Colors.red,
-              label: '본관',
-            ),
-            buildBox(
-              left: sx(283),
-              top: sy(510),
-              width: sx(58),
-              height: sy(42),
-              color: Colors.indigo,
-              label: '후생동',
-            ),
-            buildBox(
-              left: sx(253),
-              top: sy(477),
-              width: sx(25),
-              height: sy(75),
-              color: Colors.grey,
-              label: '신관',
-            ),
-            buildBox(
-              left: sx(140),
-              top: sy(45),
-              width: sx(87),
-              height: sy(30),
-              color: Colors.brown,
-              label: '배광시험동',
             ),
           ],
         );
