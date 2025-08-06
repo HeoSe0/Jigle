@@ -9,7 +9,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
     required double top,
     required double width,
     required double height,
-    required Color color, // 사용되지 않지만 구조상 남겨둠
+    required Color color,
     required String label,
   }) {
     return Positioned(
@@ -21,7 +21,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
         onTap: () => onTap(label),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.transparent, width: 3),
+            border: Border.all(color: color, width: 3),
           ),
         ),
       ),
@@ -55,6 +55,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
                       fit: BoxFit.fill,
                     ),
                   ),
+                  // 비율 고정 박스들 (색상 다시 적용)
                   buildBox(
                     left: s(280),
                     top: s(304),

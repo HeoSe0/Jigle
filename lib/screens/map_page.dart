@@ -9,25 +9,43 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  final List<String> factories = [
-    'SL 진량 본사',
-    'SL 대구공장',
-    'SL 천안공장',
-    'SL 안산공장',
-    'SL 성산공장',
-  ];
-
-  String selectedFactory = 'SL 진량 본사';
+  String selectedFactory = 'SL 진량 본사'; // 기본 선택
   bool showFactoryList = false;
 
+  final List<String> factories = [
+    'SL 진량 본사',
+    '진량공장 A동',
+    '진량공장 B동',
+    '생산기술센터',
+    'ADAS',
+    '중앙시험동',
+    '본관',
+    '후생동',
+    '신관',
+    '배광시험동',
+  ];
+
   void _toggleFactoryList() {
-    setState(() => showFactoryList = !showFactoryList);
+    setState(() {
+      showFactoryList = !showFactoryList;
+    });
+
+    if (showFactoryList) {
+      Future.delayed(const Duration(seconds: 8), () {
+        if (mounted) {
+          setState(() {
+            showFactoryList = false;
+          });
+        }
+      });
+    }
   }
 
   void _goToPage(BuildContext context, String buildingName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$buildingName 페이지로 이동')),
-    );
+    setState(() {
+      selectedFactory = buildingName;
+      showFactoryList = false;
+    });
   }
 
   Widget _buildFactoryList() {
@@ -73,6 +91,19 @@ class _MapPageState extends State<MapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        leading: selectedFactory != 'SL 진량 본사'
+            ? IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            setState(() {
+              selectedFactory = 'SL 진량 본사';
+              showFactoryList = false;
+            });
+          },
+        )
+            : null,
+      ),
       body: Stack(
         children: [
           // 지도 영역
