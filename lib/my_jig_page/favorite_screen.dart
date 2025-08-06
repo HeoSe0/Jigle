@@ -3,7 +3,6 @@ import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
 import '../my_jig_page/warehouse_screen.dart';
 import '../my_jig_page/admin_screen.dart';
-import '../my_jig_page/favorite_screen.dart';
 import '../my_jig_page/recent_screen.dart';
 import '../my_jig_page/event_screen.dart';
 import '../widgets/jig_item_data.dart';
@@ -82,34 +81,37 @@ class MyJigsPage extends StatelessWidget {
   }
 
   Widget _buildLikedListScreen(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return Theme(
+      data: ThemeData(scaffoldBackgroundColor: Colors.white),
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.black),
-        title: const Text("관심 지그", style: TextStyle(color: Colors.black)),
-      ),
-      body: Container(
-        color: Colors.white,
-        child: ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: likedItems.length,
-          itemBuilder: (context, index) {
-            final item = likedItems[index];
-            return Container(
-              color: Colors.white,
-              child: JigItem(
-                image: item.image,
-                title: item.title,
-                location: item.location,
-                price: item.description,
-                registrant: item.registrant,
-                likes: item.likes,
-                isLiked: item.isLiked,
-              ),
-            );
-          },
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.black),
+          title: const Text("관심 지그", style: TextStyle(color: Colors.black)),
+        ),
+        body: Container(
+          color: Colors.white,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(10),
+            itemCount: likedItems.length,
+            itemBuilder: (context, index) {
+              final item = likedItems[index];
+              return Container(
+                color: Colors.white,
+                child: JigItem(
+                  image: item.image,
+                  title: item.title,
+                  location: item.location,
+                  price: item.description,
+                  registrant: item.registrant,
+                  likes: item.likes,
+                  isLiked: item.isLiked,
+                ),
+              );
+            },
+          ),
         ),
       ),
     );

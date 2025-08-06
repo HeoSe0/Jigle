@@ -3,7 +3,6 @@ import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
 import '../my_jig_page/warehouse_screen.dart';
 import '../my_jig_page/admin_screen.dart';
-import '../my_jig_page/favorite_screen.dart';
 import '../my_jig_page/recent_screen.dart';
 import '../my_jig_page/event_screen.dart';
 import '../widgets/jig_item_data.dart';

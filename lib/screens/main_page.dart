@@ -23,8 +23,7 @@ class _MainPageState extends State<MainPage> {
     ),
   ];
 
-  List<JigItemData> likedItems = []; // 관심 지그 저장
-
+  List<JigItemData> likedItems = [];
   String selectedLocation = '진량공장 2층';
   int selectedTab = 0;
   String selectedSort = '최신순';
@@ -57,13 +56,16 @@ class _MainPageState extends State<MainPage> {
         backgroundColor: Colors.white,
         title: const Text("삭제하시겠습니까?", style: TextStyle(color: Colors.black)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("아니오")),
           TextButton(
+            child: const Text("아니오"),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          TextButton(
+            child: const Text("예"),
             onPressed: () {
               setState(() => jigItems.removeAt(index));
               Navigator.pop(ctx);
             },
-            child: const Text("예"),
           ),
         ],
       ),
@@ -102,12 +104,12 @@ class _MainPageState extends State<MainPage> {
               child: Row(
                 children: [
                   TextButton(
-                    onPressed: () => setState(() => selectedSort = '최신순'),
                     child: Text('최신순', style: TextStyle(color: selectedSort == '최신순' ? Colors.black : Colors.grey)),
+                    onPressed: () => setState(() => selectedSort = '최신순'),
                   ),
                   TextButton(
-                    onPressed: () => setState(() => selectedSort = '이름순'),
                     child: Text('이름순', style: TextStyle(color: selectedSort == '이름순' ? Colors.black : Colors.grey)),
+                    onPressed: () => setState(() => selectedSort = '이름순'),
                   ),
                 ],
               ),
@@ -208,9 +210,9 @@ class _MainPageState extends State<MainPage> {
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: selectedTab,
-        onTap: (index) => setState(() => selectedTab = index),
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
+        onTap: (index) => setState(() => selectedTab = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "홈"),
           BottomNavigationBarItem(icon: Icon(Icons.map), label: "지도"),
@@ -219,8 +221,8 @@ class _MainPageState extends State<MainPage> {
       ),
       floatingActionButton: selectedTab == 0
           ? OutlinedButton(
-        onPressed: () => _showAddOrEditJigDialog(),
         child: const Text("+ 지그 등록"),
+        onPressed: () => _showAddOrEditJigDialog(),
       )
           : null,
     );
