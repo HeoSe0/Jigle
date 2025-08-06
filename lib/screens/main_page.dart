@@ -23,8 +23,11 @@ class _MainPageState extends State<MainPage> {
     ),
   ];
 
+  List<JigItemData> likedItems = []; // 관심 지그 저장
+
   String selectedLocation = '진량공장 2층';
   int selectedTab = 0;
+  String selectedSort = '최신순';
 
   void _showAddOrEditJigDialog({JigItemData? editItem, int? editIndex}) {
     showModalBottomSheet(
@@ -39,7 +42,7 @@ class _MainPageState extends State<MainPage> {
             if (editIndex != null) {
               jigItems[editIndex] = newJig;
             } else {
-              jigItems.add(newJig);
+              jigItems.insert(0, newJig);
             }
           });
         },
@@ -67,50 +70,93 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  void _toggleLike(JigItemData item) {
+    setState(() {
+      item.isLiked = !item.isLiked;
+      if (item.isLiked && !likedItems.contains(item)) {
+        likedItems.add(item);
+        item.likes += 1;
+      } else if (!item.isLiked) {
+        likedItems.remove(item);
+        item.likes = item.likes > 0 ? item.likes - 1 : 0;
+      }
+    });
+  }
+
+  List<JigItemData> _getSortedFilteredItems() {
+    List<JigItemData> filtered = jigItems.where((item) => item.location == selectedLocation).toList();
+    if (selectedSort == '이름순') {
+      filtered.sort((a, b) => a.title.compareTo(b.title));
+    }
+    return filtered;
+  }
+
   Widget getBody() {
     switch (selectedTab) {
       case 0:
-        return ListView.builder(
-          padding: const EdgeInsets.all(10),
-          itemCount: jigItems.length,
-          itemBuilder: (context, index) {
-            final item = jigItems[index];
-            if (item.location != selectedLocation) return const SizedBox.shrink();
-            return Stack(
-              children: [
-                JigItem(
-                  image: item.image,
-                  title: item.title,
-                  location: item.location,
-                  price: item.description,
-                  registrant: item.registrant,
-                  likes: item.likes,
-                ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Row(
+        final items = _getSortedFilteredItems();
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  TextButton(
+                    onPressed: () => setState(() => selectedSort = '최신순'),
+                    child: Text('최신순', style: TextStyle(color: selectedSort == '최신순' ? Colors.black : Colors.grey)),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(() => selectedSort = '이름순'),
+                    child: Text('이름순', style: TextStyle(color: selectedSort == '이름순' ? Colors.black : Colors.grey)),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.all(10),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  return Stack(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.black),
-                        onPressed: () =>
-                            _showAddOrEditJigDialog(editItem: item, editIndex: index),
+                      JigItem(
+                        image: item.image,
+                        title: item.title,
+                        location: item.location,
+                        price: item.description,
+                        registrant: item.registrant,
+                        likes: item.likes,
+                        isLiked: item.isLiked,
+                        onLikePressed: () => _toggleLike(item),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.black),
-                        onPressed: () => _confirmDelete(index),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.black),
+                              onPressed: () => _showAddOrEditJigDialog(editItem: item, editIndex: index),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, color: Colors.black),
+                              onPressed: () => _confirmDelete(index),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            );
-          },
+                  );
+                },
+              ),
+            ),
+          ],
         );
       case 1:
         return const MapPage();
       case 2:
-        return const MyJigsPage();
+        return MyJigsPage(likedItems: likedItems);
       default:
         return const Center(child: Text("페이지 없음"));
     }
@@ -156,15 +202,13 @@ class _MainPageState extends State<MainPage> {
             ),
           ],
         )
-            : const Text(""), // 지도/나의지그 탭에서는 비워둠
+            : const Text(""),
       ),
       body: getBody(),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,
         currentIndex: selectedTab,
-        onTap: (index) {
-          setState(() => selectedTab = index);
-        },
+        onTap: (index) => setState(() => selectedTab = index),
         selectedItemColor: Colors.black,
         unselectedItemColor: Colors.grey,
         items: const [

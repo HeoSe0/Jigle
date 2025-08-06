@@ -6,9 +6,13 @@ import '../my_jig_page/admin_screen.dart';
 import '../my_jig_page/favorite_screen.dart';
 import '../my_jig_page/recent_screen.dart';
 import '../my_jig_page/event_screen.dart';
+import '../widgets/jig_item_data.dart';
+import '../widgets/jig_item.dart';
 
 class MyJigsPage extends StatelessWidget {
-  const MyJigsPage({super.key});
+  final List<JigItemData> likedItems;
+
+  const MyJigsPage({super.key, required this.likedItems});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +21,6 @@ class MyJigsPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // 프로필 영역
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -45,8 +48,6 @@ class MyJigsPage extends StatelessWidget {
                 ],
               ),
             ),
-
-            // 메뉴 버튼 4개
             Container(
               padding: const EdgeInsets.all(16),
               child: GridView.count(
@@ -55,7 +56,7 @@ class MyJigsPage extends StatelessWidget {
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 16,
                 mainAxisSpacing: 16,
-                childAspectRatio: 4, //가로 : 세로 비율
+                childAspectRatio: 4,
                 children: [
                   _buildMenuButton(context, '나의 지그', const MyJigScreen()),
                   _buildMenuButton(context, '나의 샘플', const MySampleScreen()),
@@ -64,13 +65,11 @@ class MyJigsPage extends StatelessWidget {
                 ],
               ),
             ),
-
-            // 하단 버튼 3개
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: Row(
                 children: [
-                  _buildIconBox(context, Icons.favorite_border, '관심목록', const FavoriteScreen()),
+                  _buildIconBox(context, Icons.favorite_border, '관심목록', _buildLikedListScreen(context)),
                   _buildIconBox(context, Icons.history, '최근 본 글', const RecentScreen()),
                   _buildIconBox(context, Icons.star_border, '이벤트', const EventScreen()),
                 ],
@@ -82,7 +81,43 @@ class MyJigsPage extends StatelessWidget {
     );
   }
 
-  // 상단 네모 버튼 생성기
+  Widget _buildLikedListScreen(BuildContext context) {
+    return Theme(
+      data: ThemeData(scaffoldBackgroundColor: Colors.white),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.black),
+          title: const Text("관심 지그", style: TextStyle(color: Colors.black)),
+        ),
+        body: Container(
+          color: Colors.white,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(10),
+            itemCount: likedItems.length,
+            itemBuilder: (context, index) {
+              final item = likedItems[index];
+              return Container(
+                color: Colors.white,
+                child: JigItem(
+                  image: item.image,
+                  title: item.title,
+                  location: item.location,
+                  price: item.description,
+                  registrant: item.registrant,
+                  likes: item.likes,
+                  isLiked: item.isLiked,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMenuButton(BuildContext context, String label, Widget targetScreen) {
     return GestureDetector(
       onTap: () {
@@ -106,7 +141,6 @@ class MyJigsPage extends StatelessWidget {
     );
   }
 
-  // 하단 버튼 생성기 (비율 기반 크기 조정)
   Widget _buildIconBox(BuildContext context, IconData icon, String label, Widget targetScreen) {
     return Expanded(
       child: GestureDetector(
@@ -117,7 +151,7 @@ class MyJigsPage extends StatelessWidget {
           );
         },
         child: AspectRatio(
-          aspectRatio: 2, //가로 : 세로 비율
+          aspectRatio: 2,
           child: Container(
             margin: const EdgeInsets.all(6),
             decoration: BoxDecoration(

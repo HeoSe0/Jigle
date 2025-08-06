@@ -1,10 +1,11 @@
 class JigItemData {
   final String image;
-  String title;
-  String location;
-  String description;
-  String registrant;
+  final String title;
+  final String location;
+  final String description;
+  final String registrant;
   int likes;
+  bool isLiked; // ← 이 필드 추가
 
   JigItemData({
     required this.image,
@@ -13,5 +14,6 @@ class JigItemData {
     required this.description,
     required this.registrant,
     this.likes = 0,
+    this.isLiked = false, // ← 초기값 지정
   });
 }

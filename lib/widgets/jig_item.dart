@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';  //지그 1개 아이템 카드 UI
 class JigItem extends StatelessWidget {
   final String image, title, location, price, registrant;
   final int likes;
+  final bool isLiked;
+  final VoidCallback? onLikePressed;
 
   const JigItem({
     super.key,
@@ -11,7 +13,9 @@ class JigItem extends StatelessWidget {
     required this.location,
     required this.price,
     required this.registrant,
-    this.likes = 0,
+    required this.likes,
+    this.isLiked = false,
+    this.onLikePressed,
   });
 
   @override
@@ -20,6 +24,7 @@ class JigItem extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
+        color: Colors.white,
         border: Border.all(color: Colors.grey.shade300),
         borderRadius: BorderRadius.circular(8),
       ),
@@ -38,7 +43,14 @@ class JigItem extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    const Icon(Icons.favorite, size: 16, color: Colors.red),
+                    GestureDetector(
+                      onTap: onLikePressed,
+                      child: Icon(
+                        Icons.favorite,
+                        size: 16,
+                        color: isLiked ? Colors.red : Colors.grey,
+                      ),
+                    ),
                     const SizedBox(width: 4),
                     Text('$likes'),
                   ],
