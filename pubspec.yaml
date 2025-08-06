@@ -23,7 +23,7 @@ flutter:
 
   assets:
     - assets/
-
+    - assets/maps/
   fonts:
     - family: Pretendard-M
       fonts:
