@@ -1,122 +1,155 @@
 import 'package:flutter/material.dart';
-import '/map_page/jinryang_map.dart';
 
-class MapPage extends StatefulWidget {
+class MapPage extends StatelessWidget {
   const MapPage({super.key});
-
-  @override
-  State<MapPage> createState() => _MapPageState();
-}
-
-class _MapPageState extends State<MapPage> {
-  final List<String> factories = [
-    'SL 진량 본사',
-    'SL 대구공장',
-    'SL 천안공장',
-    'SL 안산공장',
-    'SL 성산공장',
-  ];
-
-  String selectedFactory = 'SL 진량 본사';
-  bool showFactoryList = false;
-
-  void _toggleFactoryList() {
-    setState(() => showFactoryList = !showFactoryList);
-  }
-
-  void _goToPage(BuildContext context, String buildingName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$buildingName 페이지로 이동')),
-    );
-  }
-
-  Widget _buildFactoryList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: factories.map((name) {
-        final isSelected = selectedFactory == name;
-
-        return Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-            onPressed: () {
-              setState(() {
-                selectedFactory = name;
-                showFactoryList = false;
-              });
-            },
-            child: Text(name),
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildFactoryMap(String factory) {
-    if (factory == 'SL 진량 본사') {
-      return buildJinryangMap(context, (buildingName) => _goToPage(context, buildingName));
-    }
-
-    return Center(
-      child: Text(
-        '$factory 지도는 준비 중입니다.',
-        style: const TextStyle(fontSize: 24),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // 지도 영역
-          Positioned.fill(
-            child: Container(
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
+      appBar: AppBar(title: const Text('SL 진량 본사')),
+      body: Center(
+        child: InteractiveViewer(
+          child: Stack(
+            children: [
+              Image.asset(
+                'factory_map.png',
+                fit: BoxFit.cover,
               ),
-              child: _buildFactoryMap(selectedFactory),
-            ),
-          ),
 
-          // 공장 선택 버튼 및 리스트
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                OutlinedButton(
-                  onPressed: _toggleFactoryList,
-                  style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
-                  child: Text(selectedFactory),
+              // 진량공장 A동
+              Positioned(
+                left: 270,
+                top: 290,
+                width: 180,
+                height: 160,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '진량공장 A동'),
+                  child: _buildBorderBox(Colors.blue),
                 ),
-                if (showFactoryList)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.black),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(2, 2),
-                        ),
-                      ],
-                    ),
-                    child: _buildFactoryList(),
-                  ),
-              ],
-            ),
+              ),
+
+              // 진량공장 B동
+              Positioned(
+                left: 270,
+                top: 65,
+                width: 180,
+                height: 190,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '진량공장 B동'),
+                  child: _buildBorderBox(Colors.orange),
+                ),
+              ),
+
+              // 생산기술센터
+              Positioned(
+                left: 75,
+                top: 208,
+                width: 165,
+                height: 100,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '생산기술센터'),
+                  child: _buildBorderBox(Colors.green),
+                ),
+              ),
+
+              // ADAS
+              Positioned(
+                left: 60,
+                top: 74,
+                width: 160,
+                height: 58,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, 'ADAS'),
+                  child: _buildBorderBox(Colors.purple),
+                ),
+              ),
+
+              // 중앙시험동
+              Positioned(
+                left: 480,
+                top: 70,
+                width: 30,
+                height: 140,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '중앙시험동'),
+                  child: _buildBorderBox(Colors.teal),
+                ),
+              ),
+
+              // 본관
+              Positioned(
+                left: 340,
+                top: 485,
+                width: 80,
+                height: 40,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '본관'),
+                  child: _buildBorderBox(Colors.red),
+                ),
+              ),
+
+              // 후생동
+              Positioned(
+                left: 243,
+                top: 485,
+                width: 80,
+                height: 40,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '후생동'),
+                  child: _buildBorderBox(Colors.indigo),
+                ),
+              ),
+
+              // 신관
+              Positioned(
+                left: 203,
+                top: 450,
+                width: 35,
+                height: 75,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '신관'),
+                  child: _buildBorderBox(Colors.grey),
+                ),
+              ),
+
+              // ✅ 배광시험동 (추가됨)
+              Positioned(
+                left: 140,
+                top: 45,
+                width: 87,
+                height: 30,
+                child: GestureDetector(
+                  onTap: () => _showDialog(context, '배광시험동'),
+                  child: _buildBorderBox(Colors.brown),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 공통 스타일 함수
+  Widget _buildBorderBox(Color color) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: color, width: 2),
+        color: Colors.transparent,
+      ),
+    );
+  }
+
+  void _showDialog(BuildContext context, String buildingName) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(buildingName),
+        content: const Text('이 영역을 클릭했습니다.'),
+        actions: [
+          TextButton(
+            child: const Text('닫기'),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ],
       ),
