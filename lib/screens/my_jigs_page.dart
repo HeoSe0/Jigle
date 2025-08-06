@@ -108,6 +108,8 @@ class MyJigsPage extends StatelessWidget {
                   registrant: item.registrant,
                   likes: item.likes,
                   isLiked: item.isLiked,
+                  storageDate: item.storageDate, // 추가
+                  disposalDate: item.disposalDate, // 추가
                 ),
               );
             },

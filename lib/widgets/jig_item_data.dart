@@ -5,7 +5,9 @@ class JigItemData {
   final String description;
   final String registrant;
   int likes;
-  bool isLiked; // ← 이 필드 추가
+  bool isLiked;
+  final DateTime? storageDate;
+  final DateTime? disposalDate;
 
   JigItemData({
     required this.image,
@@ -14,6 +16,8 @@ class JigItemData {
     required this.description,
     required this.registrant,
     this.likes = 0,
-    this.isLiked = false, // ← 초기값 지정
+    this.isLiked = false,
+    this.storageDate,
+    this.disposalDate,
   });
 }

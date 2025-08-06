@@ -131,6 +131,8 @@ class _MainPageState extends State<MainPage> {
                         likes: item.likes,
                         isLiked: item.isLiked,
                         onLikePressed: () => _toggleLike(item),
+                        storageDate: item.storageDate, // 추가
+                        disposalDate: item.disposalDate, // 추가
                       ),
                       Positioned(
                         top: 0,

@@ -4,6 +4,8 @@ class JigItem extends StatelessWidget {
   final String image, title, location, price, registrant;
   final int likes;
   final bool isLiked;
+  final DateTime? storageDate;
+  final DateTime? disposalDate;
   final VoidCallback? onLikePressed;
 
   const JigItem({
@@ -14,6 +16,8 @@ class JigItem extends StatelessWidget {
     required this.price,
     required this.registrant,
     required this.likes,
+    required this.storageDate,
+    required this.disposalDate,
     this.isLiked = false,
     this.onLikePressed,
   });
@@ -38,7 +42,12 @@ class JigItem extends StatelessWidget {
               children: [
                 Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(location),
-                Text(price),
+                if (storageDate != null && disposalDate != null)
+                  Text(
+                    "${storageDate!.toLocal().toString().split(' ')[0]} ~ ${disposalDate!.toLocal().toString().split(' ')[0]}",
+                    style: const TextStyle(fontSize: 12, color: Colors.black),
+                  ),
+                Text(price.trim().isNotEmpty ? price : '지그 설명 없음'),
                 Text("등록자: $registrant"),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,

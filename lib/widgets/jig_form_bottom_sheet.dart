@@ -45,9 +45,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       image: "jig_example1.jpg",
       title: titleController.text,
       location: location,
-      description:
-          "${startDate?.toLocal().toString().split(' ')[0]} ~ ${endDate?.toLocal().toString().split(' ')[0]}\n${descriptionController.text}",
+      description: descriptionController.text, // ⛔ 날짜 추가하지 않음
       registrant: registrantController.text,
+      storageDate: startDate,
+      disposalDate: endDate,
     );
     widget.onSubmit(newJig);
     Navigator.pop(context);
