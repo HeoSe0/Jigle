@@ -6,7 +6,9 @@ class MapPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('SL 진량 본사')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(title: const Text('SL 진량 본사'),
+        backgroundColor: Colors.white,),
       body: Center(
         child: InteractiveViewer(
           child: Stack(

@@ -108,8 +108,8 @@ class MyJigsPage extends StatelessWidget {
                   registrant: item.registrant,
                   likes: item.likes,
                   isLiked: item.isLiked,
-                  storageDate: item.storageDate, // 추가
-                  disposalDate: item.disposalDate, // 추가
+                  storageDate: item.storageDate,
+                  disposalDate: item.disposalDate,
                 ),
               );
             },
@@ -129,8 +129,17 @@ class MyJigsPage extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade400, width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              offset: const Offset(2, 2),
+              blurRadius: 4,
+              spreadRadius: 1,
+            ),
+          ],
         ),
         child: Center(
           child: Text(
@@ -156,8 +165,17 @@ class MyJigsPage extends StatelessWidget {
           child: Container(
             margin: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade400, width: 1.2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.shade300,
+                  offset: const Offset(2, 2),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
