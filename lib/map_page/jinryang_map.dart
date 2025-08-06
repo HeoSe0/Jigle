@@ -1,4 +1,3 @@
-// jinryang_map.dart
 import 'package:flutter/material.dart';
 
 Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
@@ -10,7 +9,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
     required double top,
     required double width,
     required double height,
-    required Color color,
+    required Color color, // <- 현재는 무시되지만 남겨둠
     required String label,
   }) {
     return Positioned(
@@ -22,7 +21,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
         onTap: () => onTap(label),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: color, width: 3),
+            border: Border.all(color: Colors.transparent, width: 3),
           ),
         ),
       ),
@@ -50,7 +49,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
                 alignment: Alignment.center,
               ),
             ),
-            // 박스들 (원본 좌표 기준 -> 비율 기반)
+            // 박스들 (테두리는 모두 투명)
             buildBox(
               left: sx(300),
               top: sy(304),
