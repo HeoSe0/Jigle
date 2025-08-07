@@ -225,6 +225,10 @@ class _MainPageState extends State<MainPage> {
           ? OutlinedButton(
         child: const Text("+ 지그 등록"),
         onPressed: () => _showAddOrEditJigDialog(),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.black, // ← 글자색 검정!
+          side: const BorderSide(color: Colors.black), // 테두리도 검정이면 같이 설정
+        ),
       )
           : null,
     );
