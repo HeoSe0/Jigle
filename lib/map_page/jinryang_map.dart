@@ -1,5 +1,17 @@
 import 'package:flutter/material.dart';
 
+class JinryangMap extends StatelessWidget {
+  const JinryangMap({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      child: const Center(child: Text('진량 본사 지도')),
+    );
+  }
+}
+
 Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
   const imageOriginalWidth = 700.0;  // 원본 지도 이미지 너비
   const imageOriginalHeight = 600.0; // 원본 지도 이미지 높이
@@ -86,7 +98,7 @@ Widget buildJinryangMap(BuildContext context, void Function(String) onTap) {
                     width: s(173),
                     height: s(60),
                     color: Colors.purple,
-                    label: 'ADAS',
+                    label: 'ADAS 센터',
                   ),
                   buildBox(
                     left: s(495),

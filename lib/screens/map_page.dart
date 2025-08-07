@@ -1,5 +1,16 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+
 import '/map_page/jinryang_map.dart';
+import '/map_page/jinryang_maps/jinryang_a_dong_map.dart';
+import '/map_page/jinryang_maps/jinryang_b_dong_map.dart';
+import '/map_page/jinryang_maps/jinryang_main_building_map.dart';
+import '/map_page/jinryang_maps/jinryang_husaengdong_map.dart';
+import '/map_page/jinryang_maps/jinryang_singwan_map.dart';
+import '/map_page/jinryang_maps/jinryang_production_tech_center_map.dart';
+import '/map_page/jinryang_maps/jinryang_adas_center_map.dart';
+import '/map_page/jinryang_maps/jinryang_central_test_building_map.dart';
+import '/map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -9,144 +20,185 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  String selectedFactory = 'SL 진량 본사'; // 기본 선택
-  bool showFactoryList = false;
+  String selectedFactoryGroup = 'SL 진량 본사';
+  String? selectedBuilding;
+  bool isBuildingNavVisible = false;
+  Timer? _hideTimer;
 
-  final List<String> factories = [
-    'SL 진량 본사',
-    '진량공장 A동',
-    '진량공장 B동',
-    '생산기술센터',
-    'ADAS',
-    '중앙시험동',
-    '본관',
-    '후생동',
-    '신관',
-    '배광시험동',
-  ];
+  final Map<String, List<String>> factoryBuildings = {
+    'SL 진량 본사': [
+      '신관',
+      '본관',
+      '후생동',
+      '진량공장 A동',
+      '진량공장 B동',
+      '생산기술센터',
+      'ADAS 센터',
+      '중앙시험동',
+      '배광시험동',
+    ],
+    'SL 대구공장': ['공장1', '공장2'],
+    'SL 천안공장': ['공장1', '공장2'],
+    'SL 안산공장': ['공장1', '공장2'],
+    'SL 성산공장': ['공장1', '공장2'],
+  };
 
-  void _toggleFactoryList() {
+  void _selectFactoryGroup(String group) {
     setState(() {
-      showFactoryList = !showFactoryList;
+      selectedFactoryGroup = group;
+      selectedBuilding = null;
+      isBuildingNavVisible = true;
     });
+    _startHideTimer();
+  }
 
-    if (showFactoryList) {
-      Future.delayed(const Duration(seconds: 8), () {
-        if (mounted) {
-          setState(() {
-            showFactoryList = false;
-          });
-        }
+  void _selectBuilding(String building) {
+    setState(() {
+      selectedBuilding = building;
+      isBuildingNavVisible = true;
+    });
+    _startHideTimer();
+  }
+
+  void _startHideTimer() {
+    _hideTimer?.cancel();
+    _hideTimer = Timer(const Duration(seconds: 3), () {
+      setState(() {
+        isBuildingNavVisible = false;
       });
-    }
-  }
-
-  void _goToPage(BuildContext context, String buildingName) {
-    setState(() {
-      selectedFactory = buildingName;
-      showFactoryList = false;
     });
   }
 
-  Widget _buildFactoryList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: factories.map((name) {
-        final isSelected = selectedFactory == name;
+  @override
+  void dispose() {
+    _hideTimer?.cancel();
+    super.dispose();
+  }
 
+  Widget _buildFactoryGroupButtons() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: factoryBuildings.keys.map((group) {
+        final isSelected = group == selectedFactoryGroup;
         return Container(
-          margin: const EdgeInsets.symmetric(vertical: 2),
+          margin: const EdgeInsets.symmetric(vertical: 4),
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            onPressed: () {
-              setState(() {
-                selectedFactory = name;
-                showFactoryList = false;
-              });
-            },
-            child: Text(name),
+            onPressed: () => _selectFactoryGroup(group),
+            child: Text(group),
           ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildFactoryMap(String factory) {
-    if (factory == 'SL 진량 본사') {
-      return buildJinryangMap(context, (buildingName) => _goToPage(context, buildingName));
+  Widget _buildBuildingListVertical() {
+    final buildings = factoryBuildings[selectedFactoryGroup]!;
+
+    return ListView.builder(
+      itemCount: buildings.length,
+      itemBuilder: (context, index) {
+        final name = buildings[index];
+        final isSelected = name == selectedBuilding;
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSelected ? Colors.blue.shade300 : Colors.grey.shade200,
+              foregroundColor: Colors.black,
+              minimumSize: const Size(double.infinity, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            ),
+            onPressed: () => _selectBuilding(name),
+            child: Text('${index + 1}. $name'),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMapContent() {
+    void onBack() {
+      setState(() {
+        selectedBuilding = null;
+        isBuildingNavVisible = true;
+      });
+      _startHideTimer();
     }
 
-    return Center(
-      child: Text(
-        '$factory 지도는 준비 중입니다.',
-        style: const TextStyle(fontSize: 24),
-      ),
-    );
+    if (selectedBuilding == null) {
+      return Container(
+        margin: const EdgeInsets.all(10),
+        child: buildJinryangMap(context, _selectBuilding),
+      );
+    }
+
+    switch (selectedBuilding) {
+      case '진량공장 A동':
+        return JinryangADongMap(onBack: onBack);
+      case '진량공장 B동':
+        return JinryangBDongMap(onBack: onBack);
+      case '본관':
+        return JinryangMainBuildingMap(onBack: onBack);
+      case '후생동':
+        return JinryangHusaengdongMap(onBack: onBack);
+      case '신관':
+        return JinryangSingwanMap(onBack: onBack);
+      case '생산기술센터':
+        return JinryangProductionTechCenterMap(onBack: onBack);
+      case 'ADAS 센터':
+        return JinryangAdasCenterMap(onBack: onBack);
+      case '중앙시험동':
+        return JinryangCentralTestBuildingMap(onBack: onBack);
+      case '배광시험동':
+        return JinryangBaekwangTestBuildingMap(onBack: onBack);
+      default:
+        return Center(child: Text('$selectedBuilding 지도는 준비 중입니다.'));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool showMap = selectedFactoryGroup == 'SL 진량 본사';
+
     return Scaffold(
-      appBar: AppBar(
-        leading: selectedFactory != 'SL 진량 본사'
-            ? IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            setState(() {
-              selectedFactory = 'SL 진량 본사';
-              showFactoryList = false;
-            });
-          },
-        )
-            : null,
-      ),
+      appBar: AppBar(title: const Text('공장 지도')),
       body: Stack(
         children: [
-          // 지도 영역
           Positioned.fill(
+            child: showMap ? _buildMapContent() : const Center(child: Text('지도 준비 중')),
+          ),
+
+          Positioned(
+            top: 12,
+            left: 12,
             child: Container(
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.black),
-              ),
-              child: _buildFactoryMap(selectedFactory),
+              color: Colors.transparent,
+              child: _buildFactoryGroupButtons(),
             ),
           ),
 
-          // 공장 선택 버튼 및 리스트
-          Positioned(
-            top: 20,
-            left: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                OutlinedButton(
-                  onPressed: _toggleFactoryList,
-                  style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
-                  child: Text(selectedFactory),
-                ),
-                if (showFactoryList)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(color: Colors.black),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(2, 2),
-                        ),
-                      ],
-                    ),
-                    child: _buildFactoryList(),
-                  ),
-              ],
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            top: 12,
+            left: isBuildingNavVisible ? 160 : 100,
+            width: isBuildingNavVisible ? 140 : 0,
+            height: 340,
+            curve: Curves.easeInOut,
+            child: AnimatedOpacity(
+              opacity: isBuildingNavVisible ? 1 : 0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                color: Colors.transparent,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _buildBuildingListVertical(),
+              ),
             ),
           ),
         ],
