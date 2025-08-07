@@ -10,6 +10,7 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
       context: context,
       builder: (_) => AlertDialog(
         title: Text('$label 이미지'),
+        backgroundColor: Colors.white,
         content: Image.asset(
           'assets/sample_box1.png',
           fit: BoxFit.cover,
