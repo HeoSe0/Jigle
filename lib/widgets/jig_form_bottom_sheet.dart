@@ -45,7 +45,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       image: "jig_example1.jpg",
       title: titleController.text,
       location: location,
-      description: descriptionController.text, // ⛔ 날짜 추가하지 않음
+      description: descriptionController.text,
       registrant: registrantController.text,
       storageDate: startDate,
       disposalDate: endDate,
@@ -56,125 +56,129 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white, // ✅ 전체 배경 흰색
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("지그 등록 또는 수정", style: TextStyle(fontSize: 18)),
-            const SizedBox(height: 10),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: Material(
+        color: Colors.white,
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("지그 등록 또는 수정", style: TextStyle(fontSize: 18)),
+                const SizedBox(height: 10),
 
-            TextField(
-              controller: titleController,
-              decoration: const InputDecoration(labelText: '제목'),
-            ),
-            const SizedBox(height: 10),
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(labelText: '제목'),
+                ),
+                const SizedBox(height: 10),
 
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(labelText: '설명'),
-              maxLines: 3,
-            ),
-            const SizedBox(height: 10),
+                TextField(
+                  controller: descriptionController,
+                  decoration: const InputDecoration(labelText: '설명'),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 10),
 
-            TextField(
-              controller: registrantController,
-              decoration: const InputDecoration(labelText: '등록자'),
-            ),
-            const SizedBox(height: 10),
+                TextField(
+                  controller: registrantController,
+                  decoration: const InputDecoration(labelText: '등록자'),
+                ),
+                const SizedBox(height: 10),
 
-            const Text("보관 장소", style: TextStyle(fontWeight: FontWeight.bold)),
-            Wrap(
-              spacing: 8,
-              children: ['진량공장 2층', '배광실 2층', '본관 4층'].map((place) {
-                final isSelected = location == place;
-                return ChoiceChip(
-                  label: Text(
-                    place,
-                    style: TextStyle(
-                      color: isSelected ? Colors.white : Colors.black,
+                const Text("보관 장소", style: TextStyle(fontWeight: FontWeight.bold)),
+                Wrap(
+                  spacing: 8,
+                  children: ['진량공장 2층', '배광실 2층', '본관 4층'].map((place) {
+                    final isSelected = location == place;
+                    return ChoiceChip(
+                      label: Text(
+                        place,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      selected: isSelected,
+                      selectedColor: Colors.blue,
+                      backgroundColor: Colors.white,
+                      onSelected: (_) => setState(() => location = place),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 10),
+
+                const Text("보관 기한", style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) setState(() => startDate = picked);
+                      },
+                      child: Text(
+                        startDate == null
+                            ? '보관 날짜'
+                            : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100),
+                        );
+                        if (picked != null) setState(() => endDate = picked);
+                      },
+                      child: Text(
+                        endDate == null
+                            ? '폐기 날짜'
+                            : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
+                        style: const TextStyle(color: Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+
+                Center(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      minimumSize: const Size(200, 45),
+                      side: const BorderSide(color: Colors.blueAccent),
+                    ),
+                    onPressed: _submit,
+                    child: Text(
+                      widget.editItem == null ? "등록 완료" : "수정 완료",
+                      style: const TextStyle(color: Colors.black),
                     ),
                   ),
-                  selected: isSelected,
-                  selectedColor: Colors.blue,
-                  backgroundColor: Colors.white,
-                  onSelected: (_) => setState(() => location = place),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 10),
-
-            const Text("보관 기한", style: TextStyle(fontWeight: FontWeight.bold)),
-            Row(
-              children: [
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) setState(() => startDate = picked);
-                  },
-                  child: Text(
-                    startDate == null
-                        ? '보관 날짜'
-                        : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
-                    style: const TextStyle(color: Colors.black),
-                  ),
                 ),
-                const SizedBox(width: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                  ),
-                  onPressed: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2100),
-                    );
-                    if (picked != null) setState(() => endDate = picked);
-                  },
-                  child: Text(
-                    endDate == null
-                        ? '폐기 날짜'
-                        : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
-                    style: const TextStyle(color: Colors.black),
-                  ),
-                ),
+                const SizedBox(height: 10),
               ],
             ),
-            const SizedBox(height: 30),
-
-            // ✅ 하단 중앙 "수정 완료" 버튼
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  minimumSize: const Size(200, 45),
-                  side: const BorderSide(color: Colors.blueAccent),
-                ),
-                onPressed: _submit,
-                child: Text(
-                  widget.editItem == null ? "등록 완료" : "수정 완료",
-                  style: const TextStyle(color: Colors.black),
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
+          ),
         ),
       ),
     );

@@ -33,6 +33,9 @@ class _MainPageState extends State<MainPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (_) => JigFormBottomSheet(
         editItem: editItem,
         onSubmit: (newJig) {
