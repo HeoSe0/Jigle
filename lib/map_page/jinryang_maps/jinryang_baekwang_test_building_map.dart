@@ -11,7 +11,7 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: Text('$label 이미지'),
         content: Image.asset(
-          'assets/sample_box1.png', // 공통으로 사용할 이미지 경로
+          'assets/sample_box1.png',
           fit: BoxFit.cover,
         ),
         actions: [
@@ -26,13 +26,12 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
 
   Widget _buildShelfColumn(List<String> labels, BuildContext context) {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
       children: labels
           .map(
             (label) => Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          width: 160, // 2.5배
-          height: 80, // 1.5배
+          width: 80,
+          height: 160,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.lightBlue.shade100,
@@ -51,14 +50,49 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
     );
   }
 
+  Widget _buildShelfRow({
+    required List<String> rightLabels,
+    required List<String> leftLabels,
+    required BuildContext context,
+  }) {
+    return SizedBox(
+      height: 12 * 168,
+      child: Stack(
+        children: [
+          // 정확한 위치에 박스 고정 (화면 기준 비율 조정)
+          Align(
+            alignment: Alignment.center,
+            child: FractionallySizedBox(
+              widthFactor: 0.62, // ★ 튜닝 포인트: 너비 위치 조절
+              alignment: Alignment.center,
+              child: Container(
+                width: 184, // 80 + 24 + 80
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.black, width: 2),
+                ),
+              ),
+            ),
+          ),
+
+          // 하늘색 버튼 Row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildShelfColumn(rightLabels, context),
+              const SizedBox(width: 24),
+              _buildShelfColumn(leftLabels, context),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final leftLabels = [
-      ...List.generate(24, (i) => 'L${i + 1}'),
-    ];
-    final rightLabels = [
-      ...List.generate(24, (i) => 'R${i + 1}'),
-    ];
+    final leftLabels = List.generate(24, (i) => 'L${i + 1}');
+    final rightLabels = List.generate(24, (i) => 'R${i + 1}');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -70,9 +104,8 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
                 child: Column(
                   children: [
-                    // 입구 + 방향 표시
-                    Column(
-                      children: const [
+                    const Column(
+                      children: [
                         Text(
                           "IN",
                           style: TextStyle(
@@ -85,39 +118,25 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
                         SizedBox(height: 20),
                       ],
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black, width: 2),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildShelfColumn(rightLabels.sublist(0, 12), context),
-                          _buildShelfColumn(leftLabels.sublist(0, 12), context),
-                        ],
-                      ),
+
+                    _buildShelfRow(
+                      rightLabels: rightLabels.sublist(0, 12),
+                      leftLabels: leftLabels.sublist(0, 12),
+                      context: context,
                     ),
+
                     const SizedBox(height: 50),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.black, width: 2),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildShelfColumn(rightLabels.sublist(12), context),
-                          _buildShelfColumn(leftLabels.sublist(12), context),
-                        ],
-                      ),
+
+                    _buildShelfRow(
+                      rightLabels: rightLabels.sublist(12),
+                      leftLabels: leftLabels.sublist(12),
+                      context: context,
                     ),
                   ],
                 ),
               ),
             ),
+
             Positioned(
               top: 12,
               left: 12,
