@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '/map_page/jinryang_map.dart';
@@ -23,7 +22,6 @@ class _MapPageState extends State<MapPage> {
   String selectedFactoryGroup = 'SL 진량 본사';
   String? selectedBuilding;
   bool isBuildingNavVisible = false;
-  Timer? _hideTimer;
 
   final Map<String, List<String>> factoryBuildings = {
     'SL 진량 본사': [
@@ -45,34 +43,27 @@ class _MapPageState extends State<MapPage> {
 
   void _selectFactoryGroup(String group) {
     setState(() {
-      selectedFactoryGroup = group;
-      selectedBuilding = null;
-      isBuildingNavVisible = true;
+      if (selectedFactoryGroup == group) {
+        isBuildingNavVisible = !isBuildingNavVisible;
+      } else {
+        selectedFactoryGroup = group;
+        selectedBuilding = null;
+        isBuildingNavVisible = true;
+      }
     });
-    _startHideTimer();
   }
 
   void _selectBuilding(String building) {
     setState(() {
       selectedBuilding = building;
-      isBuildingNavVisible = true;
-    });
-    _startHideTimer();
-  }
-
-  void _startHideTimer() {
-    _hideTimer?.cancel();
-    _hideTimer = Timer(const Duration(seconds: 3), () {
-      setState(() {
-        isBuildingNavVisible = false;
-      });
     });
   }
 
-  @override
-  void dispose() {
-    _hideTimer?.cancel();
-    super.dispose();
+  void _goBack() {
+    setState(() {
+      selectedBuilding = null;
+      isBuildingNavVisible = false;
+    });
   }
 
   Widget _buildFactoryGroupButtons() {
@@ -97,17 +88,17 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  Widget _buildBuildingListVertical() {
+  Widget _buildBuildingListColumn() {
     final buildings = factoryBuildings[selectedFactoryGroup]!;
 
-    return ListView.builder(
-      itemCount: buildings.length,
-      itemBuilder: (context, index) {
-        final name = buildings[index];
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: buildings.map((name) {
         final isSelected = name == selectedBuilding;
-
+        final index = buildings.indexOf(name);
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
+          width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: isSelected ? Colors.blue.shade300 : Colors.grey.shade200,
@@ -119,19 +110,11 @@ class _MapPageState extends State<MapPage> {
             child: Text('${index + 1}. $name'),
           ),
         );
-      },
+      }).toList(),
     );
   }
 
   Widget _buildMapContent() {
-    void onBack() {
-      setState(() {
-        selectedBuilding = null;
-        isBuildingNavVisible = true;
-      });
-      _startHideTimer();
-    }
-
     if (selectedBuilding == null) {
       return Container(
         margin: const EdgeInsets.all(10),
@@ -141,23 +124,23 @@ class _MapPageState extends State<MapPage> {
 
     switch (selectedBuilding) {
       case '진량공장 A동':
-        return JinryangADongMap(onBack: onBack);
+        return JinryangADongMap(onBack: _goBack);
       case '진량공장 B동':
-        return JinryangBDongMap(onBack: onBack);
+        return JinryangBDongMap(onBack: _goBack);
       case '본관':
-        return JinryangMainBuildingMap(onBack: onBack);
+        return JinryangMainBuildingMap(onBack: _goBack);
       case '후생동':
-        return JinryangHusaengdongMap(onBack: onBack);
+        return JinryangHusaengdongMap(onBack: _goBack);
       case '신관':
-        return JinryangSingwanMap(onBack: onBack);
+        return JinryangSingwanMap(onBack: _goBack);
       case '생산기술센터':
-        return JinryangProductionTechCenterMap(onBack: onBack);
+        return JinryangProductionTechCenterMap(onBack: _goBack);
       case 'ADAS 센터':
-        return JinryangAdasCenterMap(onBack: onBack);
+        return JinryangAdasCenterMap(onBack: _goBack);
       case '중앙시험동':
-        return JinryangCentralTestBuildingMap(onBack: onBack);
+        return JinryangCentralTestBuildingMap(onBack: _goBack);
       case '배광시험동':
-        return JinryangBaekwangTestBuildingMap(onBack: onBack);
+        return JinryangBaekwangTestBuildingMap(onBack: _goBack);
       default:
         return Center(child: Text('$selectedBuilding 지도는 준비 중입니다.'));
     }
@@ -168,13 +151,26 @@ class _MapPageState extends State<MapPage> {
     final bool showMap = selectedFactoryGroup == 'SL 진량 본사';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('공장 지도')),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0.5,
+        leading: IconButton(
+          onPressed: _goBack,
+          icon: const Icon(Icons.arrow_back),
+          tooltip: '뒤로가기',
+        ),
+        title: const Padding(
+          padding: EdgeInsets.only(left: 8), // 아이콘과 간격 벌리기
+          child: Text('공장 지도'),
+        ),
+      ),
       body: Stack(
         children: [
           Positioned.fill(
             child: showMap ? _buildMapContent() : const Center(child: Text('지도 준비 중')),
           ),
-
           Positioned(
             top: 12,
             left: 12,
@@ -183,13 +179,11 @@ class _MapPageState extends State<MapPage> {
               child: _buildFactoryGroupButtons(),
             ),
           ),
-
           AnimatedPositioned(
             duration: const Duration(milliseconds: 300),
             top: 12,
             left: isBuildingNavVisible ? 160 : 100,
-            width: isBuildingNavVisible ? 140 : 0,
-            height: 340,
+            width: isBuildingNavVisible ? 160 : 0,
             curve: Curves.easeInOut,
             child: AnimatedOpacity(
               opacity: isBuildingNavVisible ? 1 : 0,
@@ -197,7 +191,7 @@ class _MapPageState extends State<MapPage> {
               child: Container(
                 color: Colors.transparent,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
-                child: _buildBuildingListVertical(),
+                child: _buildBuildingListColumn(),
               ),
             ),
           ),
