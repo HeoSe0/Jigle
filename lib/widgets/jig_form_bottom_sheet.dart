@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'jig_item_data.dart';
 
 class JigFormBottomSheet extends StatefulWidget {
@@ -18,17 +20,14 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   String location = '진량공장 2층';
   DateTime? startDate;
   DateTime? endDate;
+  XFile? pickedImage;
 
   @override
   void initState() {
     super.initState();
     titleController = TextEditingController(text: widget.editItem?.title ?? '');
-    descriptionController = TextEditingController(
-      text: widget.editItem?.description ?? '',
-    );
-    registrantController = TextEditingController(
-      text: widget.editItem?.registrant ?? '',
-    );
+    descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
+    registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
     location = widget.editItem?.location ?? location;
   }
 
@@ -40,9 +39,19 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     super.dispose();
   }
 
+  Future<void> _pickImage({bool fromCamera = false}) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+    );
+    if (image != null) {
+      setState(() => pickedImage = image);
+    }
+  }
+
   void _submit() {
     final newJig = JigItemData(
-      image: "jig_example1.jpg",
+      image: pickedImage?.path ?? widget.editItem?.image ?? 'jig_example1.jpg',
       title: titleController.text,
       location: location,
       description: descriptionController.text,
@@ -50,6 +59,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
     );
+
+    // 서버 업로드용 JSON 생성 예시 (추후 확장 가능)
+    // final jsonData = newJig.toJson();
+
     widget.onSubmit(newJig);
     Navigator.pop(context);
   }
@@ -70,6 +83,58 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 📸 사진 추가 버튼 + 카메라
+                Row(
+                  children: [
+                    const Icon(Icons.add_a_photo, color: Colors.black),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade100,
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () => _pickImage(fromCamera: false),
+                      child: const Text('사진 추가하기'),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade100,
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: () => _pickImage(fromCamera: true),
+                      child: const Text('카메라로 촬영'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // 🖼 썸네일 미리보기 박스 (항상 표시)
+                Container(
+                  width: double.infinity,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: pickedImage != null
+                      ? ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.file(
+                      File(pickedImage!.path),
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                      : const Center(
+                    child: Text(
+                      '썸네일 미리보기 없음',
+                      style: TextStyle(color: Colors.black54),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
                 const Text("지그 등록 또는 수정", style: TextStyle(fontSize: 18)),
                 const SizedBox(height: 10),
 
@@ -117,9 +182,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 Row(
                   children: [
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -138,9 +201,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
