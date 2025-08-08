@@ -25,6 +25,7 @@ flutter:
     - assets/
     - assets/maps/
     - assets/sample_box1.png
+    - assets/bdong_map.png
 
   fonts:
     - family: Pretendard-M
