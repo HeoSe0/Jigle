@@ -10,7 +10,6 @@ class JinryangBDongMap extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // LayoutBuilder로 이미지 크기 기반 버튼 위치 지정
           LayoutBuilder(
             builder: (context, constraints) {
               final imageWidth = constraints.maxWidth;
@@ -27,17 +26,10 @@ class JinryangBDongMap extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
 
-                    // 버튼들 - 비율 기반 위치 지정
-                    _buildShelfButton("L1", 0.13, 0.373, imageWidth, imageHeight),
-                    _buildShelfButton("L2", 0.13, 0.63, imageWidth, imageHeight),
-                    _buildShelfButton("L3", 0.13, 0.8, imageWidth, imageHeight),
-
-                    _buildShelfButton("R1", 0.81, 0.373, imageWidth, imageHeight),
-                    _buildShelfButton("R2", 0.81, 0.63, imageWidth, imageHeight),
-                    _buildShelfButton("R3", 0.81, 0.8, imageWidth, imageHeight),
-
-                    _buildShelfButton("C1", 0.42, 0.135, imageWidth, imageHeight),
-                    _buildShelfButton("C2", 0.60, 0.135, imageWidth, imageHeight),
+                    // 선반 버튼들 (비율 기반 위치 및 크기)
+                    _buildShelfButton(context, "L1", 0.08, 0.25, 0.13, 0.63, imageWidth, imageHeight),
+                    _buildShelfButton(context, "R1", 0.75, 0.25, 0.13, 0.63, imageWidth, imageHeight),
+                    _buildShelfButton(context, "C1", 0.31, 0.10, 0.37, 0.14, imageWidth, imageHeight),
                   ],
                 ),
               );
@@ -64,29 +56,48 @@ class JinryangBDongMap extends StatelessWidget {
     );
   }
 
-  /// 버튼 생성 함수 (위치 비율 기반)
+  /// 선반 버튼 생성 함수
   Widget _buildShelfButton(
+      BuildContext context,
       String label,
       double leftPercent,
       double topPercent,
+      double widthPercent,
+      double heightPercent,
       double imageWidth,
       double imageHeight,
       ) {
     return Positioned(
       left: imageWidth * leftPercent,
       top: imageHeight * topPercent,
-      child: ElevatedButton(
+      width: imageWidth * widthPercent,
+      height: imageHeight * heightPercent,
+      child: TextButton(
         onPressed: () {
-          debugPrint('$label 클릭됨');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$label 클릭됨')),
+          );
         },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.black.withOpacity(0.6),
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.all(6),
-          minimumSize: const Size(40, 30),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        style: TextButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.zero,
+          ),
+          padding: EdgeInsets.zero,
         ),
-        child: FittedBox(child: Text(label)),
+        child: Container(
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              backgroundColor: Colors.black54, // 글자 배경도 약간 입혀서 가독성 ↑
+            ),
+          ),
+        ),
       ),
     );
   }
