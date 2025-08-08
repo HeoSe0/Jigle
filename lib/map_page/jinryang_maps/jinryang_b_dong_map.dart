@@ -18,7 +18,7 @@ class JinryangBDongMap extends StatelessWidget {
               return Center(
                 child: Stack(
                   children: [
-                    // 지도 이미지
+                    // 배경 지도 이미지
                     Image.asset(
                       'assets/bdong_map.png',
                       width: imageWidth,
@@ -26,10 +26,40 @@ class JinryangBDongMap extends StatelessWidget {
                       fit: BoxFit.contain,
                     ),
 
-                    // 선반 버튼들 (비율 기반 위치 및 크기)
-                    _buildShelfButton(context, "L1", 0.08, 0.25, 0.13, 0.63, imageWidth, imageHeight),
-                    _buildShelfButton(context, "R1", 0.75, 0.25, 0.13, 0.63, imageWidth, imageHeight),
-                    _buildShelfButton(context, "C1", 0.31, 0.10, 0.37, 0.14, imageWidth, imageHeight),
+                    // 선반 버튼들 (각 버튼에 실제 이미지 표시 연결)
+                    _buildShelfButton(
+                      context,
+                      label: "L1",
+                      leftPercent: 0.08,
+                      topPercent: 0.25,
+                      widthPercent: 0.13,
+                      heightPercent: 0.63,
+                      imageWidth: imageWidth,
+                      imageHeight: imageHeight,
+                      imagePath: 'assets/shelf_L1.png',
+                    ),
+                    _buildShelfButton(
+                      context,
+                      label: "R1",
+                      leftPercent: 0.75,
+                      topPercent: 0.25,
+                      widthPercent: 0.13,
+                      heightPercent: 0.63,
+                      imageWidth: imageWidth,
+                      imageHeight: imageHeight,
+                      imagePath: 'assets/shelf_R1.png',
+                    ),
+                    _buildShelfButton(
+                      context,
+                      label: "C1",
+                      leftPercent: 0.31,
+                      topPercent: 0.10,
+                      widthPercent: 0.37,
+                      heightPercent: 0.14,
+                      imageWidth: imageWidth,
+                      imageHeight: imageHeight,
+                      imagePath: 'assets/shelf_C1.png',
+                    ),
                   ],
                 ),
               );
@@ -56,17 +86,18 @@ class JinryangBDongMap extends StatelessWidget {
     );
   }
 
-  /// 선반 버튼 생성 함수
+  /// 버튼 생성 함수
   Widget _buildShelfButton(
-      BuildContext context,
-      String label,
-      double leftPercent,
-      double topPercent,
-      double widthPercent,
-      double heightPercent,
-      double imageWidth,
-      double imageHeight,
-      ) {
+      BuildContext context, {
+        required String label,
+        required double leftPercent,
+        required double topPercent,
+        required double widthPercent,
+        required double heightPercent,
+        required double imageWidth,
+        required double imageHeight,
+        required String imagePath,
+      }) {
     return Positioned(
       left: imageWidth * leftPercent,
       top: imageHeight * topPercent,
@@ -74,19 +105,14 @@ class JinryangBDongMap extends StatelessWidget {
       height: imageHeight * heightPercent,
       child: TextButton(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$label 클릭됨')),
-          );
+          _showImageDialog(context, label, imagePath);
         },
         style: TextButton.styleFrom(
           backgroundColor: Colors.transparent,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.zero,
-          ),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
           padding: EdgeInsets.zero,
         ),
         child: Container(
-          color: Colors.transparent,
           alignment: Alignment.center,
           child: Text(
             label,
@@ -94,10 +120,30 @@ class JinryangBDongMap extends StatelessWidget {
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              backgroundColor: Colors.black54, // 글자 배경도 약간 입혀서 가독성 ↑
+              backgroundColor: Colors.black54,
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// 이미지 팝업 다이얼로그
+  void _showImageDialog(BuildContext context, String label, String imagePath) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('$label 선반 이미지'),
+        content: Image.asset(
+          imagePath,
+          fit: BoxFit.contain,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('닫기'),
+          ),
+        ],
       ),
     );
   }
