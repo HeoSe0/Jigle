@@ -170,15 +170,24 @@ class _MapPageState extends State<MapPage> {
 
     // 개별 건물
     switch (selectedBuilding) {
-      case '진량공장 A동': return JinryangADongMap(onBack: _goBack);
-      case '진량공장 B동': return JinryangBDongMap(onBack: _goBack);
-      case '본관': return JinryangMainBuildingMap(onBack: _goBack);
-      case '후생동': return JinryangHusaengdongMap(onBack: _goBack);
-      case '신관': return JinryangSingwanMap(onBack: _goBack);
-      case '생산기술센터': return JinryangProductionTechCenterMap(onBack: _goBack);
-      case 'ADAS 센터': return JinryangAdasCenterMap(onBack: _goBack);
-      case '중앙시험동': return JinryangCentralTestBuildingMap(onBack: _goBack);
-      case '배광시험동': return JinryangBaekwangTestBuildingMap(onBack: _goBack);
+      case '진량공장 A동':
+        return JinryangADongMap(onBack: _goBack);
+      case '진량공장 B동':
+        return JinryangBDongMap(onBack: _goBack);
+      case '본관':
+        return JinryangMainBuildingMap(onBack: _goBack);
+      case '후생동':
+        return JinryangHusaengdongMap(onBack: _goBack);
+      case '신관':
+        return JinryangSingwanMap(onBack: _goBack);
+      case '생산기술센터':
+        return JinryangProductionTechCenterMap(onBack: _goBack);
+      case 'ADAS 센터':
+        return JinryangAdasCenterMap(onBack: _goBack);
+      case '중앙시험동':
+        return JinryangCentralTestBuildingMap(onBack: _goBack);
+      case '배광시험동':
+        return JinryangBaekwangTestBuildingMap(onBack: _goBack);
       default:
         return Center(child: Text('$selectedBuilding 지도는 준비 중입니다.'));
     }
@@ -192,11 +201,14 @@ class _MapPageState extends State<MapPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
-        leading: IconButton(
-          onPressed: _goBack,
-          icon: const Icon(Icons.arrow_back),
-          tooltip: '뒤로가기',
-        ),
+        // ✅ 기본/자동 back 아이콘 숨김
+        automaticallyImplyLeading: false,
+        // ❌ 명시적으로 넣었던 leading 아이콘 제거
+        // leading: IconButton(
+        //   onPressed: _goBack,
+        //   icon: const Icon(Icons.arrow_back),
+        //   tooltip: '뒤로가기',
+        // ),
         titleSpacing: 0,
         title: _buildFactoryGroupButtonsHorizontal(),
       ),
