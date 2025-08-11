@@ -42,7 +42,92 @@ class _MapPageState extends State<MapPage> {
     setState(() => selectedBuilding = building);
   }
 
-  /// 공장 버튼 바로 아래에 건물 리스트 드롭다운(뒤로가기 없음)
+  /// 스크롤 없는 커스텀 앵커 메뉴
+  Future<String?> _showAnchoredMenuNoScroll({
+    required double left,
+    required double top,
+    required double width,
+    required List<String> items,
+  }) {
+    const rowHeight = 44.0;
+    final fullHeight = items.length * rowHeight + 8.0;
+
+    return showGeneralDialog<String>(
+      context: context,
+      barrierLabel: 'dismiss',
+      barrierDismissible: true,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 120),
+      pageBuilder: (_, __, ___) {
+        return Stack(
+          children: [
+            // 바깥 터치로 닫기
+            Positioned.fill(
+              child: GestureDetector(onTap: () => Navigator.of(context).pop()),
+            ),
+            Positioned(
+              left: left,
+              top: top,
+              child: Material(
+                color: Colors.transparent,
+                elevation: 6,
+                child: Container(
+                  width: width,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: const [
+                      BoxShadow(
+                        blurRadius: 8,
+                        color: Colors.black12,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(items.length, (i) {
+                      final name = items[i];
+                      return InkWell(
+                        onTap: () => Navigator.of(context).pop(name),
+                        child: Container(
+                          height: rowHeight,
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text('${i + 1}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(child: Text(name)),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+      transitionBuilder: (context, anim, __, child) =>
+          FadeTransition(opacity: anim, child: child),
+    );
+  }
+
+  /// 공장 버튼 바로 아래에 건물 리스트 드롭다운(뒤로가기 없음, 스크롤 없음)
   Future<void> _openBuildingMenuForGroup(
       String group,
       BuildContext buttonContext,
@@ -52,75 +137,61 @@ class _MapPageState extends State<MapPage> {
       selectedBuilding = null;
     });
 
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlayBox =
+    Overlay.of(context).context.findRenderObject() as RenderBox;
     final buttonBox = buttonContext.findRenderObject() as RenderBox;
 
-    final overlaySize = overlay.size;
-    final buttonTopLeft = buttonBox.localToGlobal(Offset.zero, ancestor: overlay);
+    final overlaySize = overlayBox.size;
+    final buttonTopLeft =
+    buttonBox.localToGlobal(Offset.zero, ancestor: overlayBox);
     final buttonBottom = buttonTopLeft.dy + buttonBox.size.height;
 
     // 메뉴 폭 고정(클램프), 좌우 12px 여백 보장
     const desiredWidth = 240.0;
     final menuWidth = desiredWidth.clamp(200.0, overlaySize.width - 24);
 
-    // 왼쪽 정렬 + 화면 넘침 방지
+    // 왼쪽 정렬 + 화면 넘침 방지(좌우만 클램프)
     double left = buttonTopLeft.dx;
     if (left + menuWidth > overlaySize.width - 12) {
       left = overlaySize.width - menuWidth - 12;
     }
     if (left < 12) left = 12;
 
-    final right = overlaySize.width - (left + menuWidth);
-    final top = buttonBottom + 6;
-
-    // 컨텐츠만큼 높이(최대치만 제한)
-    final availableHeight =
-        overlaySize.height - top - 12 - MediaQuery.of(context).padding.bottom;
-    final maxHeight = availableHeight.clamp(120.0, 420.0);
-
-    final position = RelativeRect.fromLTRB(left, top, right, 0);
+    // 위/아래 중 어디로 펼칠지 결정 (스크롤 없이 전체 보이도록)
     final buildings = factoryBuildings[group] ?? const <String>[];
+    const rowHeight = 44.0;
+    final fullHeight = buildings.length * rowHeight + 8.0;
 
-    final selected = await showMenu<String>(
-      context: context,
-      position: position,
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.white.withOpacity(0.95),
-      constraints: BoxConstraints(
-        minWidth: menuWidth,
-        maxWidth: menuWidth,
-        maxHeight: maxHeight,
-      ),
-      items: [
-        // ✅ 뒤로가기 제거: 건물 리스트만 표시
-        ...buildings.asMap().entries.map((e) {
-          final idx = e.key + 1;
-          final name = e.value;
-          return PopupMenuItem<String>(
-            value: name,
-            child: Row(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text('$idx', style: const TextStyle(fontWeight: FontWeight.w600)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Text(name)),
-              ],
-            ),
-          );
-        }),
-      ],
+    // 아래로 펼친 경우의 하단 여유
+    final bottomSpace =
+        overlaySize.height - (buttonBottom + 6) - 12 - MediaQuery.of(context).padding.bottom;
+    // 위로 펼친 경우의 상단 여유
+    final topSpace =
+        (buttonTopLeft.dy - 6) - 12 - MediaQuery.of(context).padding.top;
+
+    double top;
+    if (fullHeight <= bottomSpace) {
+      // 아래로 펼쳐도 다 보임
+      top = buttonBottom + 6;
+    } else if (fullHeight <= topSpace) {
+      // 위로 펼치면 다 보임
+      top = buttonTopLeft.dy - 6 - fullHeight;
+      if (top < 12) top = 12;
+    } else {
+      // 화면보다 메뉴가 더 큼: 그래도 스크롤 금지 조건 → 위로 붙여서 최대한 노출
+      top = (overlaySize.height - fullHeight) / 2;
+      if (top < 12) top = 12;
+    }
+
+    // 스크롤 없는 커스텀 팝업 표시
+    final selected = await _showAnchoredMenuNoScroll(
+      left: left,
+      top: top,
+      width: menuWidth,
+      items: buildings,
     );
 
-    if (selected == null) return; // 바깥 탭/ESC 등으로 닫힘
+    if (selected == null) return; // 바깥 탭으로 닫힘
     _selectBuilding(selected);
   }
 
@@ -141,7 +212,8 @@ class _MapPageState extends State<MapPage> {
                   isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
                   foregroundColor: Colors.black,
                   shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   minimumSize: const Size(0, 36),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -201,14 +273,8 @@ class _MapPageState extends State<MapPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
-        // ✅ 기본/자동 back 아이콘 숨김
+        // 기본/자동 back 아이콘 숨김
         automaticallyImplyLeading: false,
-        // ❌ 명시적으로 넣었던 leading 아이콘 제거
-        // leading: IconButton(
-        //   onPressed: _goBack,
-        //   icon: const Icon(Icons.arrow_back),
-        //   tooltip: '뒤로가기',
-        // ),
         titleSpacing: 0,
         title: _buildFactoryGroupButtonsHorizontal(),
       ),
