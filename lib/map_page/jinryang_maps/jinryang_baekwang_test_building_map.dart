@@ -2,37 +2,46 @@ import 'package:flutter/material.dart';
 
 class JinryangBaekwangTestBuildingMap extends StatelessWidget {
   final VoidCallback onBack;
-
   const JinryangBaekwangTestBuildingMap({super.key, required this.onBack});
 
+  // ===== Layout & Style constants =====
+  static const double _kBtnW = 80;
+  static const double _kBtnH = 160;
+  static const double _kGapV = 8;   // 세로 버튼 간격
+  static const double _kColGap = 70; // 좌/우 컬럼 사이 간격
+  static const int _kItemsPerColumn = 12;
+
+  static double get _rowWidth => _kBtnW * 2 + _kColGap; // 80 + 24 + 80 = 184
+  static double get _rowHeight =>
+      _kItemsPerColumn * _kBtnH + (_kItemsPerColumn - 1) * _kGapV;
+
+  // ===== Dialog =====
   void _showImage(BuildContext context, String label) {
     showDialog(
       context: context,
+      barrierDismissible: true,
       builder: (_) => AlertDialog(
         title: Text('$label 이미지'),
-        backgroundColor: Colors.white,
-        content: Image.asset(
-          'assets/sample_box1.png',
-          fit: BoxFit.cover,
-        ),
+        content: Image.asset('assets/sample_box1.png', fit: BoxFit.cover),
         actions: [
           TextButton(
-            child: const Text("닫기"),
             onPressed: () => Navigator.pop(context),
-          )
+            child: const Text('닫기'),
+          ),
         ],
       ),
     );
   }
 
+  // ===== Widgets =====
   Widget _buildShelfColumn(List<String> labels, BuildContext context) {
     return Column(
-      children: labels
-          .map(
-            (label) => Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          width: 80,
-          height: 160,
+      children: List.generate(labels.length, (i) {
+        final label = labels[i];
+        return Container(
+          margin: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : _kGapV),
+          width: _kBtnW,
+          height: _kBtnH,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.lightBlue.shade100,
@@ -41,51 +50,49 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
                 side: const BorderSide(color: Colors.black),
                 borderRadius: BorderRadius.zero,
               ),
+              padding: EdgeInsets.zero,
             ),
             onPressed: () => _showImage(context, label),
             child: Text(label),
           ),
-        ),
-      )
-          .toList(),
+        );
+      }),
     );
   }
 
+  /// 한 행(좌 12개 / 우 12개) 레이아웃
   Widget _buildShelfRow({
-    required List<String> rightLabels,
-    required List<String> leftLabels,
+    required List<String> rightLabels, // R1~R12
+    required List<String> leftLabels,  // L1~L12
     required BuildContext context,
   }) {
-    return SizedBox(
-      height: 12 * 168,
-      child: Stack(
-        children: [
-          // 정확한 위치에 박스 고정 (화면 기준 비율 조정)
-          Align(
-            alignment: Alignment.center,
-            child: FractionallySizedBox(
-              widthFactor: 0.62, // ★ 튜닝 포인트: 너비 위치 조절
-              alignment: Alignment.center,
+    return Center(
+      child: SizedBox(
+        width: _rowWidth,   // 184
+        height: _rowHeight, // 12*160 + 11*8
+        child: Stack(
+          children: [
+            // 중앙 박스 (좌/우 컬럼 사이 영역)
+            Positioned.fill(
               child: Container(
-                width: 184, // 80 + 24 + 80
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.black, width: 2),
+                  border: Border.all(color: Colors.black, width: 5),
                 ),
               ),
             ),
-          ),
-
-          // 하늘색 버튼 Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildShelfColumn(rightLabels, context),
-              const SizedBox(width: 24),
-              _buildShelfColumn(leftLabels, context),
-            ],
-          ),
-        ],
+            // 좌/우 버튼 컬럼
+            Positioned(
+              left: 0,
+              top: 0,
+              child: _buildShelfColumn(rightLabels, context),
+            ),
+            Positioned(
+              right: 0,
+              top: 0,
+              child: _buildShelfColumn(leftLabels, context),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -101,55 +108,49 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
         child: Stack(
           children: [
             SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-                child: Column(
-                  children: [
-                    const Column(
-                      children: [
-                        Text(
-                          "IN",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
+              child: Column(
+                children: [
+                  const Column(
+                    children: [
+                      Text(
+                        'IN',
+                        style: TextStyle(
+                          color: Colors.red,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
                         ),
-                        Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
-                        SizedBox(height: 20),
-                      ],
-                    ),
-
-                    _buildShelfRow(
-                      rightLabels: rightLabels.sublist(0, 12),
-                      leftLabels: leftLabels.sublist(0, 12),
-                      context: context,
-                    ),
-
-                    const SizedBox(height: 50),
-
-                    _buildShelfRow(
-                      rightLabels: rightLabels.sublist(12),
-                      leftLabels: leftLabels.sublist(12),
-                      context: context,
-                    ),
-                  ],
-                ),
+                      ),
+                      Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
+                      SizedBox(height: 20),
+                    ],
+                  ),
+                  // 1행 (R1~R12 / L1~L12)
+                  _buildShelfRow(
+                    rightLabels: rightLabels.sublist(0, 12),
+                    leftLabels: leftLabels.sublist(0, 12),
+                    context: context,
+                  ),
+                  const SizedBox(height: 50),
+                  // 2행 (R13~R24 / L13~L24)
+                  _buildShelfRow(
+                    rightLabels: rightLabels.sublist(12),
+                    leftLabels: leftLabels.sublist(12),
+                    context: context,
+                  ),
+                ],
               ),
             ),
 
+            // Back 버튼
             Positioned(
               top: 12,
               left: 12,
-              child: ElevatedButton(
+              child: IconButton.filledTonal(
                 onPressed: onBack,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.8),
-                  foregroundColor: Colors.black,
-                  shape: const CircleBorder(),
-                  padding: const EdgeInsets.all(8),
-                ),
-                child: const Icon(Icons.arrow_back),
+                icon: const Icon(Icons.arrow_back),
+                style: IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+                tooltip: '뒤로',
               ),
             ),
           ],
