@@ -50,9 +50,9 @@ class _MainPageState extends State<MainPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       body: _buildBody(),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
         currentIndex: _currentTab.index,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Colors.black,
