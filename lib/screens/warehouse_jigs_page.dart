@@ -29,6 +29,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       description: 'LX3 진동&배광 지그',
       registrant: '전장램프설계6팀 최은석 사원',
       storageDate: DateTime.now(),
+      size: '중형', // ✅ 사이즈 예시값
     ),
   ];
 
@@ -58,6 +59,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       registrant: edited.registrant,
       storageDate: edited.storageDate,
       disposalDate: edited.disposalDate,
+      size: edited.size,        // ✅ 사이즈 값 반영
       likes: old.likes,
       isLiked: old.isLiked,
     );
@@ -224,6 +226,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                       onLikePressed: () => _toggleLike(item),
                       storageDate: item.storageDate,
                       disposalDate: item.disposalDate,
+                      // 참고: 화면에 사이즈를 보여주려면 JigItem에 size 파라미터를 추가하세요.
                     ),
                     Positioned(
                       top: 0,
