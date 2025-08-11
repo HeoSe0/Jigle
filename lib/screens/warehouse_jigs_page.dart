@@ -1,11 +1,11 @@
-// lib/screens/warehouse_jigs_page.dart
+// lib/screens/warehouse_jigs_page.dart (final, refactored for immutable JigItemData + ascending sort)
 import 'package:flutter/material.dart';
 import '../widgets/jig_item.dart';
 import '../widgets/jig_form_bottom_sheet.dart';
 import '../widgets/jig_item_data.dart';
 
 class WarehouseJigsPage extends StatefulWidget {
-  final ValueNotifier<List<JigItemData>> likedItemsNotifier; // 공유되는 건 이것뿐
+  final ValueNotifier<List<JigItemData>> likedItemsNotifier;
 
   const WarehouseJigsPage({
     super.key,
@@ -21,7 +21,6 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
   String _selectedLocation = _locations.first;
   String _selectedSort = '최신순';
 
-  // 이 페이지 전용 상태
   final List<JigItemData> _jigItems = [
     JigItemData(
       image: 'jig_example1.jpg',
@@ -29,29 +28,75 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       location: '진량공장 2층',
       description: 'LX3 진동&배광 지그',
       registrant: '전장램프설계6팀 최은석 사원',
+      storageDate: DateTime.now(),
     ),
   ];
+
+  DateTime _dateOrEpoch(DateTime? d) => d ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   List<JigItemData> get _filtered {
     final f = _jigItems.where((e) => e.location == _selectedLocation).toList();
     if (_selectedSort == '이름순') {
       f.sort((a, b) => a.title.compareTo(b.title));
+    } else if (_selectedSort == '최신순') {
+      f.sort((a, b) => _dateOrEpoch(b.storageDate).compareTo(_dateOrEpoch(a.storageDate)));
+    } else if (_selectedSort == '오래된순') {
+      f.sort((a, b) => _dateOrEpoch(a.storageDate).compareTo(_dateOrEpoch(b.storageDate)));
     }
     return f;
   }
 
+  JigItemData _withPreservedLikeState({
+    required JigItemData edited,
+    required JigItemData old,
+  }) {
+    return JigItemData(
+      image: edited.image,
+      title: edited.title,
+      location: edited.location,
+      description: edited.description,
+      registrant: edited.registrant,
+      storageDate: edited.storageDate,
+      disposalDate: edited.disposalDate,
+      likes: old.likes,
+      isLiked: old.isLiked,
+    );
+  }
+
+  void _applyEditReplace(JigItemData oldItem, JigItemData editedFromForm) {
+    final updated = _withPreservedLikeState(edited: editedFromForm, old: oldItem);
+
+    final idx = _jigItems.indexOf(oldItem);
+    if (idx != -1) {
+      _jigItems[idx] = updated;
+    }
+
+    final liked = List<JigItemData>.from(widget.likedItemsNotifier.value);
+    final li = liked.indexOf(oldItem);
+    if (li != -1) {
+      liked[li] = updated;
+      widget.likedItemsNotifier.value = List<JigItemData>.from(liked);
+    }
+
+    _selectedLocation = updated.location;
+  }
+
   void _toggleLike(JigItemData item) {
     setState(() {
-      item.isLiked = !item.isLiked;
-      final liked = [...widget.likedItemsNotifier.value];
-      if (item.isLiked) {
-        if (!liked.contains(item)) liked.add(item);
-        item.likes += 1;
+      final current = List<JigItemData>.from(widget.likedItemsNotifier.value);
+      final alreadyLiked = current.contains(item);
+
+      if (!alreadyLiked) {
+        item.isLiked = true;
+        item.likes = item.likes + 1;
+        current.add(item);
       } else {
-        liked.remove(item);
+        item.isLiked = false;
         item.likes = item.likes > 0 ? item.likes - 1 : 0;
+        current.remove(item);
       }
-      widget.likedItemsNotifier.value = liked; // MyJigsPage에 반영
+
+      widget.likedItemsNotifier.value = List<JigItemData>.from(current);
     });
   }
 
@@ -67,11 +112,12 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
         editItem: editItem,
         onSubmit: (newJig) {
           setState(() {
-            _selectedLocation = newJig.location;
             if (editIndex != null) {
-              _jigItems[editIndex] = newJig;
+              final old = _jigItems[editIndex];
+              _applyEditReplace(old, newJig);
             } else {
               _jigItems.insert(0, newJig);
+              _selectedLocation = newJig.location;
             }
           });
         },
@@ -89,7 +135,13 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('아니오')),
           TextButton(
             onPressed: () {
-              setState(() => _jigItems.removeAt(index));
+              setState(() {
+                final removed = _jigItems.removeAt(index);
+                final current = List<JigItemData>.from(widget.likedItemsNotifier.value);
+                if (current.remove(removed)) {
+                  widget.likedItemsNotifier.value = List<JigItemData>.from(current);
+                }
+              });
               Navigator.pop(ctx);
             },
             child: const Text('예'),
@@ -138,16 +190,17 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                 TextButton(
                   onPressed: () => setState(() => _selectedSort = '최신순'),
                   child: Text('최신순',
-                      style: TextStyle(
-                        color: _selectedSort == '최신순' ? Colors.black : Colors.grey,
-                      )),
+                      style: TextStyle(color: _selectedSort == '최신순' ? Colors.black : Colors.grey)),
+                ),
+                TextButton(
+                  onPressed: () => setState(() => _selectedSort = '오래된순'),
+                  child: Text('오래된순',
+                      style: TextStyle(color: _selectedSort == '오래된순' ? Colors.black : Colors.grey)),
                 ),
                 TextButton(
                   onPressed: () => setState(() => _selectedSort = '이름순'),
                   child: Text('이름순',
-                      style: TextStyle(
-                        color: _selectedSort == '이름순' ? Colors.black : Colors.grey,
-                      )),
+                      style: TextStyle(color: _selectedSort == '이름순' ? Colors.black : Colors.grey)),
                 ),
               ],
             ),
@@ -181,12 +234,12 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                             icon: const Icon(Icons.edit, color: Colors.black),
                             onPressed: () => _showAddOrEditJigDialog(
                               editItem: item,
-                              editIndex: index,
+                              editIndex: _jigItems.indexOf(item),
                             ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, color: Colors.black),
-                            onPressed: () => _confirmDelete(index),
+                            onPressed: () => _confirmDelete(_jigItems.indexOf(item)),
                           ),
                         ],
                       ),
@@ -198,13 +251,9 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
           ),
         ],
       ),
-      floatingActionButton: OutlinedButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOrEditJigDialog(),
-        style: OutlinedButton.styleFrom(
-          foregroundColor: Colors.black,
-          side: const BorderSide(color: Colors.black),
-        ),
-        child: const Text('+ 지그 등록'),
+        label: const Text('+ 지그 등록'),
       ),
     );
   }
