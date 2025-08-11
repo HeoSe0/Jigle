@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// 진량 B동 지도 화면 (L1/R1/C1 모두 1~4층 버튼 오버레이)
-/// - 선반 버튼 → 다이얼로그 (중복 오픈 가드 + 이미지 프리캐시 + 프레임 양보)
+/// 진량 B동 지도 화면
+/// - L1/R1/C1: 선반 버튼 → 1~4층 오버레이 다이얼로그
+/// - F1~F4: 컬러 버튼 → 빈 다이얼로그 (향후 내용 삽입용)
 /// - Capacity(0~10): 0=녹색, 8~10=빨간색, 그 외=노란색
 class JinryangBDongMap extends StatefulWidget {
   final VoidCallback onBack;
 
-  // L1 층별 Capacity(0~10)
+  // L1 층별 Capacity
   final int l1Floor1Capacity;
   final int l1Floor2Capacity;
   final int l1Floor3Capacity;
   final int l1Floor4Capacity;
 
-  // R1 층별 Capacity(0~10)
+  // R1 층별 Capacity
   final int r1Floor1Capacity;
   final int r1Floor2Capacity;
   final int r1Floor3Capacity;
   final int r1Floor4Capacity;
 
-  // C1 층별 Capacity(0~10)
+  // C1 층별 Capacity
   final int c1Floor1Capacity;
   final int c1Floor2Capacity;
   final int c1Floor3Capacity;
@@ -47,6 +48,14 @@ class JinryangBDongMap extends StatefulWidget {
 
 class _JinryangBDongMapState extends State<JinryangBDongMap> {
   bool _dialogOpen = false;
+
+  // F1~F4 버튼 상대좌표 (left, top, width, height)
+  static const F_BUTTONS = <_AreaSpec>[
+    _AreaSpec('F1', 0.18, 0.23, 0.27, 0.33),
+    _AreaSpec('F2', 0.55, 0.23, 0.27, 0.33),
+    _AreaSpec('F3', 0.18, 0.60, 0.27, 0.33),
+    _AreaSpec('F4', 0.55, 0.60, 0.27, 0.33),
+  ];
 
   @override
   void didChangeDependencies() {
@@ -90,12 +99,23 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                       cacheHeight: (imageHeight * dpr).round(),
                       filterQuality: FilterQuality.low,
                     ),
+                    // L1/R1/C1 선반 버튼
                     ...shelves.map(
                           (s) => _ShelfButton(
                         spec: s,
                         imageWidth: imageWidth,
                         imageHeight: imageHeight,
                         onTap: () => _onShelfTap(s),
+                      ),
+                    ),
+                    // F1~F4 컬러 버튼 (층 구분 없음)
+                    ...F_BUTTONS.map(
+                          (a) => _FloorSquareButton(
+                        spec: a,
+                        imageWidth: imageWidth,
+                        imageHeight: imageHeight,
+                        color: _colorForCapacity(_capacityForArea(a.label)),
+                        onTap: () => _onFloorTap(a.label),
                       ),
                     ),
                   ],
@@ -118,6 +138,20 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     );
   }
 
+  // F구역 별 포화도 값(0~10). 필요 시 실제 데이터로 연결하세요.
+  int _capacityForArea(String area) {
+    // 임시로 C1 1층 값 재사용 등 커스텀 가능. 지금은 0으로 둡니다.
+    return 0;
+  }
+
+  // 공통 색상 규칙: 0=그린, 8~10=레드, 그 외 옐로우
+  Color _colorForCapacity(int c) {
+    final v = c.clamp(0, 10);
+    if (v == 0) return Colors.green.withValues(alpha: 0.35);
+    if (v >= 8) return Colors.red.withValues(alpha: 0.35);
+    return Colors.yellow.withValues(alpha: 0.35);
+  }
+
   Future<void> _onShelfTap(_ShelfSpec s) async {
     if (_dialogOpen || !mounted) return;
     setState(() => _dialogOpen = true);
@@ -125,16 +159,65 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       final size = MediaQuery.of(context).size;
       final targetW = (size.width * s.width).clamp(320.0, 1600.0).toInt();
       final targetH = (size.height * s.height).clamp(320.0, 1200.0).toInt();
-      final provider = ResizeImage(AssetImage(s.imagePath), width: targetW, height: targetH);
+      final provider =
+      ResizeImage(AssetImage(s.imagePath), width: targetW, height: targetH);
       await precacheImage(provider, context);
       await Future<void>.delayed(Duration.zero);
-      await _showImageDialog(context, s.label, s.imagePath);
+      await _showShelfDialog(context, s.label, s.imagePath);
     } finally {
       if (mounted) setState(() => _dialogOpen = false);
     }
   }
 
-  Future<void> _showImageDialog(BuildContext context, String label, String imagePath) async {
+  Future<void> _onFloorTap(String label) async {
+    if (_dialogOpen || !mounted) return;
+    setState(() => _dialogOpen = true);
+    try {
+      await _showEmptyAreaDialog(context, label);
+    } finally {
+      if (mounted) setState(() => _dialogOpen = false);
+    }
+  }
+
+  Future<void> _showEmptyAreaDialog(
+      BuildContext context,
+      String areaLabel,
+      ) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) => AlertDialog(
+        titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+        title: Text(
+          '$areaLabel Zone',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+        ),
+        content: const SizedBox(
+          width: 420,
+          height: 320,
+          child: Center(
+            child: Text('내용 없음', style: TextStyle(fontSize: 16, color: Colors.grey)),
+          ),
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+            child: TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('닫기'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showShelfDialog(
+      BuildContext context,
+      String label,
+      String imagePath,
+      ) async {
     return showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -146,7 +229,8 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
             contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             title: Row(
               children: [
-                Text('$label 선반', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                Text('$label 선반',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(width: 12),
                 if (dialogZone != null)
                   Container(
@@ -155,7 +239,8 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                       color: const Color(0xFFF2E9F7),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(dialogZone!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    child: Text(dialogZone!,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                   ),
               ],
             ),
@@ -231,10 +316,12 @@ class _ShelfSpec {
   const _ShelfSpec(this.label, this.left, this.top, this.width, this.height, this.imagePath);
 }
 
+/// 선반 위치 클릭용 버튼 (지도 상단 오버레이)
 class _ShelfButton extends StatelessWidget {
   final _ShelfSpec spec;
   final double imageWidth, imageHeight;
   final VoidCallback onTap;
+
   const _ShelfButton({
     required this.spec,
     required this.imageWidth,
@@ -266,10 +353,60 @@ class _ShelfButton extends StatelessWidget {
             ),
             child: Text(
               spec.label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// F 버튼 사각 구역 사양
+class _AreaSpec {
+  final String label;
+  final double left, top, width, height; // (0~1) 상대좌표
+  const _AreaSpec(this.label, this.left, this.top, this.width, this.height);
+}
+
+// F 버튼 위젯 (단일 컬러 버튼)
+class _FloorSquareButton extends StatelessWidget {
+  final _AreaSpec spec;
+  final double imageWidth, imageHeight;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _FloorSquareButton({
+    required this.spec,
+    required this.imageWidth,
+    required this.imageHeight,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: imageWidth * spec.left,
+      top: imageHeight * spec.top,
+      width: imageWidth * spec.width,
+      height: imageHeight * spec.height,
+      child: Material(
+        color: color,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.black54,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                spec.label,
+                style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -279,14 +416,18 @@ class _ShelfButton extends StatelessWidget {
   }
 }
 
+/// 공용: 선반 이미지 위 1~4층 버튼(4개) 오버레이
 class ShelfOverlayViewer4Floors extends StatefulWidget {
   final String imagePath;
-  final void Function(String) onZoneTap;
+  final void Function(String) onZoneTap; // '1층' ~ '4층'
   final bool inlinePanel;
+
+  // 층별 Capacity
   final int floor1Capacity;
   final int floor2Capacity;
   final int floor3Capacity;
   final int floor4Capacity;
+
   final ImageProvider? bgProviderOverride;
 
   const ShelfOverlayViewer4Floors({
@@ -307,12 +448,13 @@ class ShelfOverlayViewer4Floors extends StatefulWidget {
 
 class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
   String? _selectedZone;
-  double? _imgAspect;
+  double? _imgAspect; // 실제 이미지 종횡비 (w/h)
   ImageStream? _aspectStream;
   ImageStreamListener? _aspectListener;
 
-  static const double _btnWidthFrac = 0.78;
-  static const double _btnHeightFrac = 0.42;
+  // 버튼 크기 비율 (이미지 "표시 영역" 기준)
+  static const double _btnWidthFrac = 0.78; // 가로: 이미지 폭의 78%
+  static const double _btnHeightFrac = 0.42; // 세로: 각 1/4 높이의 42%
   static const double _btnRadius = 12.0;
 
   @override
@@ -376,14 +518,15 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
           : Stack(
         key: const ValueKey('floors'),
         children: [
+          // 배경 이미지
           Positioned.fill(
             child: Image(
-              image: widget.bgProviderOverride ??
-                  const ResizeImage(AssetImage('assets/placeholder.png'), width: 1024),
+              image: widget.bgProviderOverride ?? ResizeImage(AssetImage(widget.imagePath), width: 1024),
               fit: BoxFit.contain,
               filterQuality: FilterQuality.low,
             ),
           ),
+          // 레터박스 고려하여 4개 버튼 배치
           Positioned.fill(
             child: LayoutBuilder(
               builder: (context, c) {
@@ -401,7 +544,7 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
                   offY = (ch - dispH) / 2;
                 }
 
-                Rect rectFor(int idx) {
+                Rect rectFor(int idx /* 0: top ~ 3: bottom */) {
                   final quarterH = dispH / 4;
                   final btnW = dispW * _btnWidthFrac;
                   final btnH = quarterH * _btnHeightFrac;
@@ -462,9 +605,7 @@ class _WhitePanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Expanded(
-            child: ColoredBox(color: Colors.white, child: SizedBox.expand()),
-          ),
+          const Expanded(child: ColoredBox(color: Colors.white, child: SizedBox.expand())),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: const BoxDecoration(color: Color(0xFFF2E9F7)),
@@ -511,11 +652,7 @@ class _ZoneButtonRect extends StatelessWidget {
           child: Center(
             child: Text(
               label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
             ),
           ),
         ),
