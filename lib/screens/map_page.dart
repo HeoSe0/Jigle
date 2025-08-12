@@ -1,18 +1,24 @@
+// lib/screens/map_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
-import '/map_page/jinryang_map.dart';
-import '/map_page/jinryang_maps/jinryang_a_dong_map.dart';
-import '/map_page/jinryang_maps/jinryang_b_dong_map.dart';
-import '/map_page/jinryang_maps/jinryang_main_building_map.dart';
-import '/map_page/jinryang_maps/jinryang_husaengdong_map.dart';
-import '/map_page/jinryang_maps/jinryang_singwan_map.dart';
-import '/map_page/jinryang_maps/jinryang_production_tech_center_map.dart';
-import '/map_page/jinryang_maps/jinryang_adas_center_map.dart';
-import '/map_page/jinryang_maps/jinryang_central_test_building_map.dart';
-import '/map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart';
+import '../widgets/jig_item_data.dart';
+
+import '../map_page/jinryang_map.dart';
+import '../map_page/jinryang_maps/jinryang_a_dong_map.dart';
+import '../map_page/jinryang_maps/jinryang_b_dong_map.dart';
+import '../map_page/jinryang_maps/jinryang_main_building_map.dart';
+import '../map_page/jinryang_maps/jinryang_husaengdong_map.dart';
+import '../map_page/jinryang_maps/jinryang_singwan_map.dart';
+import '../map_page/jinryang_maps/jinryang_production_tech_center_map.dart';
+import '../map_page/jinryang_maps/jinryang_adas_center_map.dart';
+import '../map_page/jinryang_maps/jinryang_central_test_building_map.dart';
+import '../map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart';
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  const MapPage({super.key, required this.jigsNotifier});
+  final ValueListenable<List<JigItemData>> jigsNotifier;
+
   @override
   State<MapPage> createState() => _MapPageState();
 }
@@ -32,17 +38,10 @@ class _MapPageState extends State<MapPage> {
     'SL 성산공장': ['공장1', '공장2'],
   };
 
-  void _goBack() {
-    setState(() {
-      selectedBuilding = null;
-    });
-  }
+  void _goBack() => setState(() => selectedBuilding = null);
+  void _selectBuilding(String building) => setState(() => selectedBuilding = building);
 
-  void _selectBuilding(String building) {
-    setState(() => selectedBuilding = building);
-  }
-
-  /// 스크롤 없는 커스텀 앵커 메뉴
+  // ---------- 커스텀 앵커 메뉴(스크롤 없음) ----------
   Future<String?> _showAnchoredMenuNoScroll({
     required double left,
     required double top,
@@ -61,7 +60,6 @@ class _MapPageState extends State<MapPage> {
       pageBuilder: (_, __, ___) {
         return Stack(
           children: [
-            // 바깥 터치로 닫기
             Positioned.fill(
               child: GestureDetector(onTap: () => Navigator.of(context).pop()),
             ),
@@ -73,15 +71,12 @@ class _MapPageState extends State<MapPage> {
                 elevation: 6,
                 child: Container(
                   width: width,
+                  height: fullHeight,
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
-                      BoxShadow(
-                        blurRadius: 8,
-                        color: Colors.black12,
-                        offset: Offset(0, 2),
-                      ),
+                      BoxShadow(blurRadius: 8, color: Colors.black12, offset: Offset(0, 2)),
                     ],
                   ),
                   child: Column(
@@ -96,17 +91,12 @@ class _MapPageState extends State<MapPage> {
                           child: Row(
                             children: [
                               Container(
-                                width: 24,
-                                height: 24,
-                                alignment: Alignment.center,
+                                width: 24, height: 24, alignment: Alignment.center,
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Text('${i + 1}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    )),
+                                child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                               ),
                               const SizedBox(width: 8),
                               Expanded(child: Text(name)),
@@ -127,75 +117,51 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
-  /// 공장 버튼 바로 아래에 건물 리스트 드롭다운(뒤로가기 없음, 스크롤 없음)
-  Future<void> _openBuildingMenuForGroup(
-      String group,
-      BuildContext buttonContext,
-      ) async {
+  Future<void> _openBuildingMenuForGroup(String group, BuildContext buttonContext) async {
     setState(() {
       selectedFactoryGroup = group;
       selectedBuilding = null;
     });
 
-    final overlayBox =
-    Overlay.of(context).context.findRenderObject() as RenderBox;
+    final overlayBox = Overlay.of(context).context.findRenderObject() as RenderBox;
     final buttonBox = buttonContext.findRenderObject() as RenderBox;
 
     final overlaySize = overlayBox.size;
-    final buttonTopLeft =
-    buttonBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+    final buttonTopLeft = buttonBox.localToGlobal(Offset.zero, ancestor: overlayBox);
     final buttonBottom = buttonTopLeft.dy + buttonBox.size.height;
 
-    // 메뉴 폭 고정(클램프), 좌우 12px 여백 보장
     const desiredWidth = 240.0;
     final menuWidth = desiredWidth.clamp(200.0, overlaySize.width - 24);
-
-    // 왼쪽 정렬 + 화면 넘침 방지(좌우만 클램프)
     double left = buttonTopLeft.dx;
-    if (left + menuWidth > overlaySize.width - 12) {
-      left = overlaySize.width - menuWidth - 12;
-    }
+    if (left + menuWidth > overlaySize.width - 12) left = overlaySize.width - menuWidth - 12;
     if (left < 12) left = 12;
 
-    // 위/아래 중 어디로 펼칠지 결정 (스크롤 없이 전체 보이도록)
     final buildings = factoryBuildings[group] ?? const <String>[];
     const rowHeight = 44.0;
     final fullHeight = buildings.length * rowHeight + 8.0;
 
-    // 아래로 펼친 경우의 하단 여유
-    final bottomSpace =
-        overlaySize.height - (buttonBottom + 6) - 12 - MediaQuery.of(context).padding.bottom;
-    // 위로 펼친 경우의 상단 여유
-    final topSpace =
-        (buttonTopLeft.dy - 6) - 12 - MediaQuery.of(context).padding.top;
+    final bottomSpace = overlaySize.height - (buttonBottom + 6) - 12 - MediaQuery.of(context).padding.bottom;
+    final topSpace = (buttonTopLeft.dy - 6) - 12 - MediaQuery.of(context).padding.top;
 
     double top;
     if (fullHeight <= bottomSpace) {
-      // 아래로 펼쳐도 다 보임
       top = buttonBottom + 6;
     } else if (fullHeight <= topSpace) {
-      // 위로 펼치면 다 보임
       top = buttonTopLeft.dy - 6 - fullHeight;
       if (top < 12) top = 12;
     } else {
-      // 화면보다 메뉴가 더 큼: 그래도 스크롤 금지 조건 → 위로 붙여서 최대한 노출
       top = (overlaySize.height - fullHeight) / 2;
       if (top < 12) top = 12;
     }
 
-    // 스크롤 없는 커스텀 팝업 표시
     final selected = await _showAnchoredMenuNoScroll(
-      left: left,
-      top: top,
-      width: menuWidth,
-      items: buildings,
+      left: left, top: top, width: menuWidth, items: buildings,
     );
-
-    if (selected == null) return; // 바깥 탭으로 닫힘
+    if (selected == null) return;
     _selectBuilding(selected);
   }
 
-  // AppBar의 가로 공장 버튼바 (버튼 컨텍스트로 메뉴 앵커링)
+  // ---------- 상단 공장 그룹 버튼 바 ----------
   Widget _buildFactoryGroupButtonsHorizontal() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -208,12 +174,10 @@ class _MapPageState extends State<MapPage> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                  isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
+                  backgroundColor: isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
                   foregroundColor: Colors.black,
                   shape: const StadiumBorder(),
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   minimumSize: const Size(0, 36),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -227,8 +191,50 @@ class _MapPageState extends State<MapPage> {
     );
   }
 
+  // ---------- B동 포화도 집계 유틸 ----------
+  int _weightForSize(String size) {
+    switch (size) {
+      case '대형': return 5;
+      case '중형': return 3;
+      case '소형':
+      default: return 1;
+    }
+  }
+
+  String? _slotOf(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    return p.length > 1 ? p[1] : null; // L1/C1/R1/F1~F4
+  }
+  String? _floorOf(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    if (p.length > 2) {
+      final m = RegExp(r'(\d)').firstMatch(p[2]);
+      if (m != null) return '${m.group(1)}층';
+    }
+    return null;
+  }
+
+  Map<String, int> _capsFrom(List<JigItemData> items) {
+    final out = <String, int>{};
+    for (final it in items) {
+      final loc = it.location.trim();
+      if (!loc.startsWith('진량공장 B동')) continue;
+      final slot = _slotOf(loc);
+      final w = _weightForSize(it.size);
+      if (slot == null) continue;
+
+      if (slot.startsWith('F')) {
+        out[slot] = (out[slot] ?? 0) + w;
+      } else {
+        final fl = _floorOf(loc);
+        if (fl != null) out['$slot/$fl'] = (out['$slot/$fl'] ?? 0) + w;
+          }
+         }
+            return out;
+        }
+
+  // ---------- 지도 콘텐츠 ----------
   Widget _buildMapContent() {
-    // 캠퍼스 전체: 진량 본사만 구현, 그 외는 placeholder
     if (selectedBuilding == null) {
       if (selectedFactoryGroup == 'SL 진량 본사') {
         return Container(
@@ -240,12 +246,42 @@ class _MapPageState extends State<MapPage> {
       }
     }
 
-    // 개별 건물
     switch (selectedBuilding) {
+      case '진량공장 B동':
+        return ValueListenableBuilder<List<JigItemData>>(
+          valueListenable: widget.jigsNotifier,
+          builder: (_, items, __) {
+            final caps = _capsFrom(items);
+            return JinryangBDongMap(
+              onBack: _goBack,
+              allItems: items,
+              // 선반/층 포화도
+              l1Floor1Capacity: caps['L1/1층'] ?? 0,
+              l1Floor2Capacity: caps['L1/2층'] ?? 0,
+              l1Floor3Capacity: caps['L1/3층'] ?? 0,
+              l1Floor4Capacity: caps['L1/4층'] ?? 0,
+              r1Floor1Capacity: caps['R1/1층'] ?? 0,
+              r1Floor2Capacity: caps['R1/2층'] ?? 0,
+              r1Floor3Capacity: caps['R1/3층'] ?? 0,
+              r1Floor4Capacity: caps['R1/4층'] ?? 0,
+              c1Floor1Capacity: caps['C1/1층'] ?? 0,
+              c1Floor2Capacity: caps['C1/2층'] ?? 0,
+              c1Floor3Capacity: caps['C1/3층'] ?? 0,
+              c1Floor4Capacity: caps['C1/4층'] ?? 0,
+              // F 존 포화도
+              f1Capacity: caps['F1'] ?? 0,
+              f2Capacity: caps['F2'] ?? 0,
+              f3Capacity: caps['F3'] ?? 0,
+              f4Capacity: caps['F4'] ?? 0,
+              // 상한(색상 스케일)
+              maxCapacityShelves: 40,
+              maxCapacityF: 20,
+            );
+          },
+        );
+
       case '진량공장 A동':
         return JinryangADongMap(onBack: _goBack);
-      case '진량공장 B동':
-        return JinryangBDongMap(onBack: _goBack);
       case '본관':
         return JinryangMainBuildingMap(onBack: _goBack);
       case '후생동':
@@ -273,7 +309,6 @@ class _MapPageState extends State<MapPage> {
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
         elevation: 0.5,
-        // 기본/자동 back 아이콘 숨김
         automaticallyImplyLeading: false,
         titleSpacing: 0,
         title: _buildFactoryGroupButtonsHorizontal(),

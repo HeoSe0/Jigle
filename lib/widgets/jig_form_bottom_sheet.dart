@@ -16,7 +16,7 @@ class JigFormBottomSheet extends StatefulWidget {
 
 class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   // 보관 장소 목록
-  static const List<String> _locations = ['진량공장 B동', '배광실 2층'];
+  static const List<String> _locations = ['진량공장 B동', '배광시험동 2층', '후생동 4층'];
 
   // 진량공장 B동 하위 지그 위치 목록
   static const List<String> _bdongSlots = ['L1', 'C1', 'R1', 'F1', 'F2', 'F3', 'F4'];
