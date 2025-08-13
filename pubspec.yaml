@@ -19,6 +19,19 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.6
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/jigle_logo.png"
+
+flutter_native_splash:
+  color: "#ffffff"
+  image: assets/jigle_logo.png
+  android: true
+  ios: true
 
 flutter:
   uses-material-design: true
@@ -32,6 +45,7 @@ flutter:
     - assets/shelf_R1.png
     - assets/shelf_C1.png
     - assets/sl_logo.png
+    - assets/jigle_logo.png   # ← 로고 파일 등록
 
   fonts:
     - family: Pretendard-M

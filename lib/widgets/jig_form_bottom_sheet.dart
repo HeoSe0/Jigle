@@ -51,7 +51,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   DateTime? startDate;
   DateTime? endDate;
 
-  // 📸 다중 이미지: data URI 문자열을 보관 (asset/http도 허용)
+  // 📸 다중 이미지: data URI/asset/http 혼합 보관
   final List<String> _images = <String>[];
   int _thumbIndex = 0;
 
@@ -70,16 +70,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     startDate = widget.editItem?.storageDate;
     endDate = widget.editItem?.disposalDate;
 
-    // ✨ 이미지 복원: images가 있으면 전체 복원, 없으면 image(대표)만 복원
+    // ✨ 이미지 복원: 기존 데이터에 대표이미지(image)만 있어도 OK
     if (widget.editItem != null) {
       final it = widget.editItem!;
-      if ((it.images).isNotEmpty) {
-        _images.addAll(it.images);
-        _thumbIndex = (it.thumbnailIndex >= 0 &&
-            it.thumbnailIndex < it.images.length)
-            ? it.thumbnailIndex
-            : 0;
-      } else if (it.image.trim().isNotEmpty) {
+      if (it.image.trim().isNotEmpty) {
         _images.add(it.image);
         _thumbIndex = 0;
       }
@@ -119,9 +113,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           baekFloor = null;
         }
       } else {
-        location = _locations.contains(incomingLocation)
-            ? incomingLocation
-            : _locations.first;
+        location =
+        _locations.contains(incomingLocation) ? incomingLocation : _locations.first;
       }
     } else {
       location = _locations.first;
@@ -213,7 +206,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
-    return;
   }
 
   // ── 제출 ────────────────────────────────────────────────────────────────
@@ -239,12 +231,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       }
     }
 
-    // 대표 썸네일(없으면 기본)
+    // ✅ 대표 썸네일(없으면 실제 존재하는 기본 이미지 사용)
     final String finalThumb = _images.isNotEmpty
         ? _images[_thumbIndex]
-        : (widget.editItem?.image ?? 'jig_example1.png');
+        : (widget.editItem?.image ?? 'assets/sample_box1.png');
 
-    // ✨ JigItemData(images/thumbnailIndex) 지원 시 보존됨. (없어도 컴파일/동작 OK)
     final newJig = JigItemData(
       image: finalThumb,
       title: titleController.text,
@@ -254,10 +245,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
-      // 아래 두 필드는 jig_item_data.dart에 추가되어 있어도/없어도 안전하게 동작하도록
-      // 기본값이 존재(옵션)해야 합니다.
-      images: List<String>.from(_images),
-      thumbnailIndex: _thumbIndex,
     );
 
     widget.onSubmit(newJig);
@@ -308,8 +295,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           backgroundColor: selected ? Colors.blue : Colors.white,
           foregroundColor: selected ? Colors.white : Colors.black,
           side: BorderSide(color: selected ? Colors.blue : Colors.black12),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         onPressed: onTap,
@@ -335,8 +321,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       child: Material(
         color: Colors.white,
         child: Padding(
-          padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -393,8 +378,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _images.length,
-                    gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
@@ -416,18 +400,26 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                               ),
                             ),
                           ),
-                          // 대표 표시
+                          // ✅ 대표 라벨 (노란색)
                           Positioned(
                             right: 6,
                             top: 6,
-                            child: CircleAvatar(
-                              radius: 12,
-                              backgroundColor:
-                              selected ? Colors.blue : Colors.black45,
-                              child: Icon(
-                                selected ? Icons.star : Icons.star_border,
-                                size: 16,
-                                color: Colors.white,
+                            child: Container(
+                              padding:
+                              const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? const Color(0xFFFFE066) // 선택 = 노란색
+                                    : Colors.black45,           // 미선택 = 반투명
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '대표',
+                                style: TextStyle(
+                                  color: selected ? Colors.black : Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
                               ),
                             ),
                           ),
@@ -643,8 +635,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 Row(
                   children: [
                     ElevatedButton(
-                      style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -663,8 +654,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      style:
-                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
