@@ -22,6 +22,7 @@ class WarehouseJigsPage extends StatefulWidget {
 }
 
 class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
+  // 상위 장소 우선순위(앞에 있을수록 드롭다운 상단/기본 선택 우선)
   static const List<String> _preferLocations = [
     '진량공장 B동',
     '배광시험동 2층',
@@ -49,12 +50,17 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     setState(_ensureSelectedLocation);
   }
 
+  // ------- 장소 유틸 -------
+
+  // '진량공장 B동 / L1 / 2층' → '진량공장 B동'
+  // '배광시험동 2층' → '배광시험동 2층' (이미 상위 레벨)
   String _parentOf(String loc) {
     final t = loc.trim();
     if (!t.contains('/')) return t;
     return t.split('/').first.trim();
   }
 
+  // 상위 장소 후보(중복 제거) + 우선순위 정렬
   List<String> get _topLocations {
     final items = widget.jigsNotifier.value;
     final set = <String>{};
@@ -73,6 +79,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     return list;
   }
 
+  // 목록 변화 시 현재 선택이 무효면 가장 선호되는 장소로 보정
   void _ensureSelectedLocation() {
     final locs = _topLocations;
     if (locs.isEmpty) {
@@ -80,6 +87,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       return;
     }
     if (_selectedLocation == null || !locs.contains(_selectedLocation)) {
+      // 선호 순서 중 존재하는 첫 항목, 없으면 첫 항목
       for (final p in _preferLocations) {
         if (locs.contains(p)) {
           _selectedLocation = p;
@@ -90,6 +98,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     }
   }
 
+  // ------- 정렬/필터 -------
+
   DateTime _dateOrEpoch(DateTime? d) => d ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   List<JigItemData> get _filtered {
@@ -97,6 +107,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     final parent = _selectedLocation;
     if (parent == null) return const [];
 
+    // 상위 장소 일치 항목만 (세부 경로 포함)
     final f = all.where((e) => _parentOf(e.location) == parent).toList();
 
     if (_selectedSort == '이름순') {
@@ -109,49 +120,42 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     return f;
   }
 
-  String? _slotOf(String loc) {
-    final p = loc.split('/').map((e) => e.trim()).toList();
-    return p.length > 1 ? p[1] : null; // L1/C1/R1/F1~F4
-  }
+  // ------- 가중치(소/중/대) -------
 
-  String? _floorOf(String loc) {
-    final p = loc.split('/').map((e) => e.trim()).toList();
-    if (p.length > 2) {
-      final m = RegExp(r'(\d)').firstMatch(p[2]);
-      if (m != null) return '${m.group(1)}층';
+  int _weightForSize(String sizeRaw) {
+    final size = sizeRaw.replaceAll(' ', '');
+    switch (size) {
+      case '대형':
+      case '대':
+        return 5;
+      case '중형':
+      case '중':
+        return 3;
+      case '소형':
+      case '소':
+      default:
+        return 1;
     }
-    return null;
   }
 
-  Map<String, int> _capsFrom(List<JigItemData> items) {
-    final out = <String, int>{};
-    for (final it in items) {
-      final loc = it.location.trim();
-      if (!loc.startsWith('진량공장 B동')) continue;
-
-      final slot = _slotOf(loc);
-      if (slot == null) continue;
-
-      final w = it.capacityWeight;
-
-      if (slot.startsWith('F')) {
-        out[slot] = (out[slot] ?? 0) + w;
-      } else {
-        final fl = _floorOf(loc);
-        if (fl != null) {
-          final key = '$slot/$fl';
-          out[key] = (out[key] ?? 0) + w;
-        }
-      }
-    }
-    return out;
-  }
+  // ------- 좋아요 보존 유틸 -------
 
   JigItemData _withPreservedLike({
     required JigItemData edited,
     required JigItemData old,
   }) {
-    return edited.copyWith(likes: old.likes, isLiked: old.isLiked);
+    return JigItemData(
+      image: edited.image,
+      title: edited.title,
+      location: edited.location,
+      description: edited.description,
+      registrant: edited.registrant,
+      storageDate: edited.storageDate,
+      disposalDate: edited.disposalDate,
+      size: edited.size,
+      likes: old.likes,
+      isLiked: old.isLiked,
+    );
   }
 
   void _replaceInLiked(JigItemData oldItem, JigItemData newItem) {
@@ -162,6 +166,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       widget.likedItemsNotifier.value = List<JigItemData>.from(liked);
     }
   }
+
+  // ------- 액션: 추가/수정/삭제/좋아요 -------
 
   void _showAddOrEditJigDialog({JigItemData? editItem, int? editIndex}) {
     showModalBottomSheet(
@@ -240,37 +246,24 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     });
   }
 
+  // ------- B동 지도 띄우기 (핵심 수정) -------
+
   void _openBDongMap() {
     final items = widget.jigsNotifier.value;
-    final caps = _capsFrom(items);
 
     Navigator.push(context, MaterialPageRoute(
       builder: (_) => JinryangBDongMap(
         onBack: () => Navigator.pop(context),
+
+        // 🔑 맵이 내부에서 allItems + weightOfItem으로 가중치 합산하여 색상을 계산
         allItems: items,
 
-        l1Floor1Capacity: caps['L1/1층'] ?? 0,
-        l1Floor2Capacity: caps['L1/2층'] ?? 0,
-        l1Floor3Capacity: caps['L1/3층'] ?? 0,
-        l1Floor4Capacity: caps['L1/4층'] ?? 0,
+        // 🔑 상한을 10으로 맞춤 (대형 2개 = 10 → 즉시 빨강)
+        maxCapacityShelves: 10,
+        maxCapacityF: 10,
 
-        r1Floor1Capacity: caps['R1/1층'] ?? 0,
-        r1Floor2Capacity: caps['R1/2층'] ?? 0,
-        r1Floor3Capacity: caps['R1/3층'] ?? 0,
-        r1Floor4Capacity: caps['R1/4층'] ?? 0,
-
-        c1Floor1Capacity: caps['C1/1층'] ?? 0,
-        c1Floor2Capacity: caps['C1/2층'] ?? 0,
-        c1Floor3Capacity: caps['C1/3층'] ?? 0,
-        c1Floor4Capacity: caps['C1/4층'] ?? 0,
-
-        f1Capacity: caps['F1'] ?? 0,
-        f2Capacity: caps['F2'] ?? 0,
-        f3Capacity: caps['F3'] ?? 0,
-        f4Capacity: caps['F4'] ?? 0,
-
-        maxCapacityShelves: 40,
-        maxCapacityF: 20,
+        // 🔑 등록 폼의 size 값을 그대로 1/3/5로 매핑해서 합산
+        weightOfItem: (JigItemData it) => _weightForSize(it.size),
       ),
     ));
   }
@@ -297,12 +290,12 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
               itemBuilder: (_) => _topLocations
                   .map(
                     (loc) => PopupMenuItem<String>(
-                      value: loc,
-                      height: 40,
-                      textStyle: const TextStyle(color: Colors.black),
-                      child: Text(loc),
-                    ),
-                  )
+                  value: loc,
+                  height: 40,
+                  textStyle: const TextStyle(color: Colors.black),
+                  child: Text(loc),
+                ),
+              )
                   .toList(growable: false),
             ),
           ],
@@ -318,6 +311,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       ),
       body: Column(
         children: [
+          // 정렬 바
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: Row(
@@ -341,13 +335,14 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
             ),
           ),
 
+          // 리스트
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.all(10),
               itemCount: items.length,
               itemBuilder: (_, index) {
                 final item = items[index];
-                final globalIndex = widget.jigsNotifier.value.indexOf(item);
+                final globalIndex = widget.jigsNotifier.value.indexOf(item); // 편집/삭제용 글로벌 인덱스
                 return Stack(
                   children: [
                     JigItem(
@@ -392,6 +387,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
         ],
       ),
 
+      // 추가 버튼
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOrEditJigDialog(),
         label: const Text('+ 지그 등록'),

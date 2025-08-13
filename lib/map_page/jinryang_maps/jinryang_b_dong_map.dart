@@ -20,12 +20,18 @@ Color colorForUtil({required int used, required int max}) {
 class JinryangBDongMap extends StatefulWidget {
   final VoidCallback onBack;
   final List<JigItemData> allItems;
+
+  // 레거시 capacity(표시는 하지 않지만 기존 파라미터 유지)
   final int l1Floor1Capacity, l1Floor2Capacity, l1Floor3Capacity, l1Floor4Capacity;
   final int r1Floor1Capacity, r1Floor2Capacity, r1Floor3Capacity, r1Floor4Capacity;
   final int c1Floor1Capacity, c1Floor2Capacity, c1Floor3Capacity, c1Floor4Capacity;
   final int f1Capacity, f2Capacity, f3Capacity, f4Capacity;
-  final int maxCapacityShelves; 
-  final int maxCapacityF;       
+
+  // 색상 상한
+  final int maxCapacityShelves;
+  final int maxCapacityF;
+
+  // 버튼 스케일/오버레이 파라미터
   final double shelfButtonWidthFactor;
   final double shelfButtonHeightFactor;
   final double fButtonWidthFactor;
@@ -34,15 +40,17 @@ class JinryangBDongMap extends StatefulWidget {
   final Map<String, double>? shelfButtonHeightOverrides;
   final Map<String, double>? fButtonWidthOverrides;
   final Map<String, double>? fButtonHeightOverrides;
-  final double overlayFloorBtnWidthFrac;            
-  final double overlayFloorBtnHeightFracOfQuarter;  
-  final double overlayFloorBtnCenterXFrac;          
-  final double overlayFloorBtnQuarterCenterYFrac;   
-  final Offset overlayFloorBtnGlobalOffsetFrac;     
-  final Map<String, double>? overlayFloorBtnWidthOverrideFrac;   
-  final Map<String, double>? overlayFloorBtnHeightOverrideFrac;  
-  final Map<String, Offset>? overlayFloorBtnOffsetOverrideFrac;  
-  final double overlayFloorBtnStackScaleY;          
+
+  final double overlayFloorBtnWidthFrac;
+  final double overlayFloorBtnHeightFracOfQuarter;
+  final double overlayFloorBtnCenterXFrac;
+  final double overlayFloorBtnQuarterCenterYFrac;
+  final Offset overlayFloorBtnGlobalOffsetFrac;
+  final Map<String, double>? overlayFloorBtnWidthOverrideFrac;
+  final Map<String, double>? overlayFloorBtnHeightOverrideFrac;
+  final Map<String, Offset>? overlayFloorBtnOffsetOverrideFrac;
+  final double overlayFloorBtnStackScaleY;
+
   final Map<String, double>? overlayFloorBtnWidthFracByShelf;
   final Map<String, double>? overlayFloorBtnHeightFracOfQuarterByShelf;
   final Map<String, double>? overlayFloorBtnStackScaleYByShelf;
@@ -51,20 +59,30 @@ class JinryangBDongMap extends StatefulWidget {
   final Map<String, Offset>? overlayFloorBtnGlobalOffsetFracByShelf;
   final Map<String, Map<String, double>>? overlayFloorBtnHeightOverrideFracByShelf;
   final Map<String, Map<String, Offset>>? overlayFloorBtnOffsetOverrideFracByShelf;
+
   final String? initialShelf;
   final String? initialFloor;
   final String? initialFZone;
+
+  /// (옵션) 외부에서 직접 소/중/대 → 1/3/5 매핑을 주고 싶을 때 사용
+  final int Function(JigItemData item)? weightOfItem;
 
   const JinryangBDongMap({
     super.key,
     required this.onBack,
     this.allItems = const [],
+
+    // 레거시 입력(유지)
     this.l1Floor1Capacity = 0, this.l1Floor2Capacity = 0, this.l1Floor3Capacity = 0, this.l1Floor4Capacity = 0,
     this.r1Floor1Capacity = 0, this.r1Floor2Capacity = 0, this.r1Floor3Capacity = 0, this.r1Floor4Capacity = 0,
     this.c1Floor1Capacity = 0, this.c1Floor2Capacity = 0, this.c1Floor3Capacity = 0, this.c1Floor4Capacity = 0,
     this.f1Capacity = 0, this.f2Capacity = 0, this.f3Capacity = 0, this.f4Capacity = 0,
-    this.maxCapacityShelves = 50,
-    this.maxCapacityF = 50,
+
+    // ✅ 상한 기본값 10 (대형 2개=10 → 바로 빨강)
+    this.maxCapacityShelves = 10,
+    this.maxCapacityF = 10,
+
+    // 버튼 스케일
     this.shelfButtonWidthFactor = 1.2,
     this.shelfButtonHeightFactor = 0.9,
     this.fButtonWidthFactor = 0.9,
@@ -73,6 +91,8 @@ class JinryangBDongMap extends StatefulWidget {
     this.shelfButtonHeightOverrides,
     this.fButtonWidthOverrides,
     this.fButtonHeightOverrides,
+
+    // 오버레이 파라미터
     this.overlayFloorBtnWidthFrac = 0.78,
     this.overlayFloorBtnHeightFracOfQuarter = 0.4,
     this.overlayFloorBtnCenterXFrac = 0.5,
@@ -82,11 +102,13 @@ class JinryangBDongMap extends StatefulWidget {
     this.overlayFloorBtnHeightOverrideFrac,
     this.overlayFloorBtnOffsetOverrideFrac,
     this.overlayFloorBtnStackScaleY = 0.6,
+
     this.overlayFloorBtnWidthFracByShelf,
     this.overlayFloorBtnHeightFracOfQuarterByShelf,
     this.overlayFloorBtnStackScaleYByShelf,
     this.overlayFloorBtnCenterXFracByShelf,
     this.overlayFloorBtnQuarterCenterYFracByShelf,
+
     this.overlayFloorBtnGlobalOffsetFracByShelf = const {
       'L1': Offset(0.0, 0.08),
       'R1': Offset(0.0, 0.08),
@@ -104,6 +126,8 @@ class JinryangBDongMap extends StatefulWidget {
     this.initialShelf,
     this.initialFloor,
     this.initialFZone,
+
+    this.weightOfItem,
   });
 
   @override
@@ -155,6 +179,18 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   }
 
   @override
+  void didUpdateWidget(covariant JinryangBDongMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 리스트/상한/매퍼 변경 시 즉시 재빌드
+    if (oldWidget.allItems != widget.allItems ||
+        oldWidget.maxCapacityF != widget.maxCapacityF ||
+        oldWidget.maxCapacityShelves != widget.maxCapacityShelves ||
+        oldWidget.weightOfItem != widget.weightOfItem) {
+      setState(() {});
+    }
+  }
+
+  @override
   void dispose() {
     if (_mapListener != null && _mapStream != null) {
       _mapStream!.removeListener(_mapListener!);
@@ -174,7 +210,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     _mapListener = ImageStreamListener((info, _) {
       if (!mounted) return;
       setState(() => _mapAspect =
-          info.image.height == 0 ? null : info.image.width / info.image.height);
+      info.image.height == 0 ? null : info.image.width / info.image.height);
       stream.removeListener(_mapListener!);
       _mapStream = null;
       _mapListener = null;
@@ -235,16 +271,18 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                   cacheWidth: (dispW * MediaQuery.of(context).devicePixelRatio).round()),
             ),
 
+            // 선반 버튼
             ...shelves.map((s) {
               final base = rectFromFrac(s.left, s.top, s.width, s.height);
               final rect = applyScale(base, s.label, isShelf: true);
               return _ShelfButton(spec: s, rect: rect, onTap: () => _onShelfTap(s));
             }),
 
+            // F 버튼 (✅ allItems + size 가중치 합계로 색상)
             ...fButtons.map((a) {
               final base = rectFromFrac(a.left, a.top, a.width, a.height);
               final rect = applyScale(base, a.label, isShelf: false);
-              final used = _capacityForArea(a.label);
+              final used = _usedWeightForFZone(a.label);
               return _FloorSquareButton(
                 label: a.label,
                 rect: rect,
@@ -265,6 +303,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     );
   }
 
+  // -------- 위치 유틸 --------
   String _norm(String s) => s.replaceAll(RegExp(r'\s+'), '').trim();
   List<String> _parts(String loc) => loc.split('/').map((e) => e.trim()).toList();
 
@@ -304,16 +343,35 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     }).toList();
   }
 
-  int _capacityForArea(String label) {
-    switch (label) {
-      case 'F1': return widget.f1Capacity;
-      case 'F2': return widget.f2Capacity;
-      case 'F3': return widget.f3Capacity;
-      case 'F4': return widget.f4Capacity;
-      default:   return 0;
+  // -------- 가중치(소/중/대) 합산 --------
+  int _weightOf(JigItemData it) {
+    // 1) 외부 콜백이 있으면 우선 사용
+    if (widget.weightOfItem != null) return widget.weightOfItem!(it);
+
+    // 2) 콜백이 없으면 size에서 직접 매핑 (공백 제거)
+    final size = (it.size ?? '').replaceAll(' ', '');
+    switch (size) {
+      case '대형':
+      case '대':
+        return 5;
+      case '중형':
+      case '중':
+        return 3;
+      case '소형':
+      case '소':
+        return 1;
+      default:
+        return 1;
     }
   }
 
+  int _usedWeightForShelfFloor(String shelf, String floor) =>
+      _itemsForShelfFloor(shelf, floor).fold(0, (sum, it) => sum + _weightOf(it));
+
+  int _usedWeightForFZone(String fzone) =>
+      _itemsForFZone(fzone).fold(0, (sum, it) => sum + _weightOf(it));
+
+  // -------- 액션/다이얼로그 --------
   String? _shelfImage(String shelf) {
     switch (shelf) {
       case 'L1': return 'assets/shelf_L1.png';
@@ -415,17 +473,11 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               final height = screen.height.clamp(320.0, 700.0).toDouble();
               final bgProvider = ResizeImage(AssetImage(imagePath), width: width.toInt());
 
-              int f1, f2, f3, f4;
-              if (label == 'L1') {
-                f1 = widget.l1Floor1Capacity; f2 = widget.l1Floor2Capacity;
-                f3 = widget.l1Floor3Capacity; f4 = widget.l1Floor4Capacity;
-              } else if (label == 'R1') {
-                f1 = widget.r1Floor1Capacity; f2 = widget.r1Floor2Capacity;
-                f3 = widget.r1Floor3Capacity; f4 = widget.r1Floor4Capacity;
-              } else {
-                f1 = widget.c1Floor1Capacity; f2 = widget.c1Floor2Capacity;
-                f3 = widget.c1Floor3Capacity; f4 = widget.c1Floor4Capacity;
-              }
+              // ✅ 층별 used = allItems에서 size 가중치 합계로 계산
+              final u1 = _usedWeightForShelfFloor(label, '1층');
+              final u2 = _usedWeightForShelfFloor(label, '2층');
+              final u3 = _usedWeightForShelfFloor(label, '3층');
+              final u4 = _usedWeightForShelfFloor(label, '4층');
 
               final perShelfW   = widget.overlayFloorBtnWidthFracByShelf?[label];
               final perShelfH   = widget.overlayFloorBtnHeightFracOfQuarterByShelf?[label];
@@ -449,7 +501,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                   onZoneTap: (z) => setSB(() => dialogZone = z),
                   bgProviderOverride: bgProvider,
                   inlinePanel: true,
-                  floor1Capacity: f1, floor2Capacity: f2, floor3Capacity: f3, floor4Capacity: f4,
+                  floor1Capacity: u1, floor2Capacity: u2, floor3Capacity: u3, floor4Capacity: u4,
                   btnWidthFrac: perShelfW ?? widget.overlayFloorBtnWidthFrac,
                   btnHeightFracOfQuarter: perShelfH ?? widget.overlayFloorBtnHeightFracOfQuarter,
                   btnCenterXFrac: perShelfCX ?? widget.overlayFloorBtnCenterXFrac,
@@ -641,7 +693,7 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
     _aspectListener = ImageStreamListener((info, _) {
       if (!mounted) return;
       setState(() => _imgAspect =
-          info.image.height == 0 ? null : info.image.width / info.image.height);
+      info.image.height == 0 ? null : info.image.width / info.image.height);
       stream.removeListener(_aspectListener!);
       _aspectStream = null;
       _aspectListener = null;
@@ -663,70 +715,70 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
       duration: const Duration(milliseconds: 220),
       child: showPanel
           ? (widget.detailsBuilder != null
-              ? widget.detailsBuilder!(widget.shelfLabel, _selectedZone!)
-              : _JigDetailPanel(
-                shelf: widget.shelfLabel,
-                floor: _selectedZone!,
-                showHeader: false,
-                child: const SizedBox(),
-              ))
+          ? widget.detailsBuilder!(widget.shelfLabel, _selectedZone!)
+          : _JigDetailPanel(
+        shelf: widget.shelfLabel,
+        floor: _selectedZone!,
+        showHeader: false,
+        child: const SizedBox(),
+      ))
           : Stack(key: const ValueKey('floors'), children: [
-              Positioned.fill(
-                child: Image(
-                  image: widget.bgProviderOverride ?? ResizeImage(AssetImage(widget.imagePath), width: 1024),
-                  fit: BoxFit.contain, filterQuality: FilterQuality.low,
-                ),
-              ),
-              Positioned.fill(
-                child: LayoutBuilder(builder: (context, c) {
-                  final cw = c.maxWidth, ch = c.maxHeight;
-                  final ar = _imgAspect ?? (16 / 9);
-                  double dispW, dispH, offX = 0, offY = 0;
-                  if (cw / ch > ar) { dispH = ch; dispW = dispH * ar; offX = (cw - dispW) / 2; }
-                  else { dispW = cw; dispH = dispW / ar; offY = (ch - dispH) / 2; }
+        Positioned.fill(
+          child: Image(
+            image: widget.bgProviderOverride ?? ResizeImage(AssetImage(widget.imagePath), width: 1024),
+            fit: BoxFit.contain, filterQuality: FilterQuality.low,
+          ),
+        ),
+        Positioned.fill(
+          child: LayoutBuilder(builder: (context, c) {
+            final cw = c.maxWidth, ch = c.maxHeight;
+            final ar = _imgAspect ?? (16 / 9);
+            double dispW, dispH, offX = 0, offY = 0;
+            if (cw / ch > ar) { dispH = ch; dispW = dispH * ar; offX = (cw - dispW) / 2; }
+            else { dispW = cw; dispH = dispW / ar; offY = (ch - dispH) / 2; }
 
-                  Rect rectFor(int idx, String floorLabel) {
-                    final quarterH = dispH / 4;
-                    final wFrac = widget.perFloorWidthFrac?[floorLabel] ?? widget.btnWidthFrac;
-                    final hFrac = widget.perFloorHeightFrac?[floorLabel] ?? widget.btnHeightFracOfQuarter;
-                    final extra = widget.perFloorOffsetFrac?[floorLabel] ?? Offset.zero;
+            Rect rectFor(int idx, String floorLabel) {
+              final quarterH = dispH / 4;
+              final wFrac = widget.perFloorWidthFrac?[floorLabel] ?? widget.btnWidthFrac;
+              final hFrac = widget.perFloorHeightFrac?[floorLabel] ?? widget.btnHeightFracOfQuarter;
+              final extra = widget.perFloorOffsetFrac?[floorLabel] ?? Offset.zero;
 
-                    final btnW = dispW * wFrac;
-                    final btnH = quarterH * hFrac;
+              final btnW = dispW * wFrac;
+              final btnH = quarterH * hFrac;
 
-                    final baseNormY = (idx + widget.btnQuarterCenterYFrac) / 4.0;
-                    final scaledNormY = 0.5 + (baseNormY - 0.5) * widget.btnStackScaleY;
+              final baseNormY = (idx + widget.btnQuarterCenterYFrac) / 4.0;
+              final scaledNormY = 0.5 + (baseNormY - 0.5) * widget.btnStackScaleY;
 
-                    final centerX = offX + dispW * (widget.btnCenterXFrac + widget.btnGlobalOffsetFrac.dx + extra.dx);
-                    final centerY = offY + dispH * (scaledNormY + widget.btnGlobalOffsetFrac.dy + extra.dy);
+              final centerX = offX + dispW * (widget.btnCenterXFrac + widget.btnGlobalOffsetFrac.dx + extra.dx);
+              final centerY = offY + dispH * (scaledNormY + widget.btnGlobalOffsetFrac.dy + extra.dy);
 
-                    return Rect.fromLTWH(centerX - btnW / 2, centerY - btnH / 2, btnW, btnH);
-                  }
+              return Rect.fromLTWH(centerX - btnW / 2, centerY - btnH / 2, btnW, btnH);
+            }
 
-                  final floors = <_FloorInfo>[
-                    _FloorInfo('4층', widget.floor4Capacity),
-                    _FloorInfo('3층', widget.floor3Capacity),
-                    _FloorInfo('2층', widget.floor2Capacity),
-                    _FloorInfo('1층', widget.floor1Capacity),
-                  ];
+            final floors = <_FloorInfo>[
+              _FloorInfo('4층', widget.floor4Capacity),
+              _FloorInfo('3층', widget.floor3Capacity),
+              _FloorInfo('2층', widget.floor2Capacity),
+              _FloorInfo('1층', widget.floor1Capacity),
+            ];
 
-                  return Stack(
-                    children: List.generate(floors.length, (i) {
-                      final f = floors[i];
-                      return _ZoneButtonRect(
-                        rect: rectFor(i, f.label), label: f.label,
-                        color: colorForUtil(used: f.capacity, max: widget.maxCapacity),
-                        radius: _btnRadius,
-                        onTap: () {
-                          setState(() => _selectedZone = f.label);
-                          widget.onZoneTap(f.label);
-                        },
-                      );
-                    }),
-                  );
-                }),
-              ),
-            ]),
+            return Stack(
+              children: List.generate(floors.length, (i) {
+                final f = floors[i];
+                return _ZoneButtonRect(
+                  rect: rectFor(i, f.label), label: f.label,
+                  color: colorForUtil(used: f.capacity, max: widget.maxCapacity),
+                  radius: _btnRadius,
+                  onTap: () {
+                    setState(() => _selectedZone = f.label);
+                    widget.onZoneTap(f.label);
+                  },
+                );
+              }),
+            );
+          }),
+        ),
+      ]),
     );
   }
 }
