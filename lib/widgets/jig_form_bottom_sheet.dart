@@ -1,5 +1,6 @@
 // lib/widgets/jig_form_bottom_sheet.dart
-import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'jig_item_data.dart';
@@ -15,29 +16,25 @@ class JigFormBottomSheet extends StatefulWidget {
 }
 
 class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
-  // 보관 장소 목록
   static const List<String> _locations = ['진량공장 B동', '배광시험동 2층', '후생동 4층'];
-
-  // 진량공장 B동 하위 지그 위치 목록
   static const List<String> _bdongSlots = ['L1', 'C1', 'R1', 'F1', 'F2', 'F3', 'F4'];
-
-  // 진량공장 B동 하위 층 목록
   static const List<String> _floors = ['1층', '2층', '3층', '4층'];
 
   late TextEditingController titleController;
   late TextEditingController descriptionController;
   late TextEditingController registrantController;
 
-  String location = '진량공장 B동'; // 상위 장소
-  String jigSize = '소형';
+  String location = '진량공장 B동';
+  String jigSize = JigItemData.sizeSmall;
 
-  // B동 하위 선택 상태
-  String? bDongSlot;   // L1/C1/R1/F1/F2/F3/F4
-  String? bDongFloor;  // 1층/2층/3층/4층
+  String? bDongSlot;
+  String? bDongFloor;
 
   DateTime? startDate;
   DateTime? endDate;
+
   XFile? pickedImage;
+  Uint8List? pickedBytes;
 
   @override
   void initState() {
@@ -46,10 +43,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
     registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
 
-    // location 초기화 + 편집 모드 파싱
     final incomingLocation = widget.editItem?.location;
     if (incomingLocation != null && incomingLocation.trim().isNotEmpty) {
-      // "진량공장 B동 / L1 / 2층" 형태 분리 처리
       if (incomingLocation.contains('/')) {
         final parts = incomingLocation.split('/').map((s) => s.trim()).toList();
         final parent = parts.isNotEmpty ? parts[0] : '진량공장 B동';
@@ -66,11 +61,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           }
         }
       } else {
-        // 단일 명칭만 저장된 경우
         location = _locations.contains(incomingLocation) ? incomingLocation : _locations.first;
       }
     } else {
-      // 신규 기본값
       location = _locations.first;
     }
 
@@ -91,14 +84,27 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     final picker = ImagePicker();
     final image = await picker.pickImage(
       source: fromCamera ? ImageSource.camera : ImageSource.gallery,
+      maxWidth: 1600,
+      imageQuality: 85,
     );
-    if (image != null) {
-      setState(() => pickedImage = image);
-    }
+    if (image == null) return;
+
+    final bytes = await image.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      pickedImage = image;
+      pickedBytes = bytes;
+    });
+  }
+
+  void _removeImage() {
+    setState(() {
+      pickedImage = null;
+      pickedBytes = null;
+    });
   }
 
   void _submit() {
-    // 저장 시: B동이면 "진량공장 B동 / 슬롯 / 층" 형태 구성
     String finalLocation = location;
     if (location == '진량공장 B동') {
       if (bDongSlot != null && bDongSlot!.isNotEmpty) {
@@ -109,8 +115,16 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       }
     }
 
+    String finalImage;
+    if (pickedBytes != null) {
+      final b64 = base64Encode(pickedBytes!);
+      finalImage = 'data:image/jpeg;base64,$b64';
+    } else {
+      finalImage = widget.editItem?.image ?? 'jig_example1.jpg';
+    }
+
     final newJig = JigItemData(
-      image: pickedImage?.path ?? widget.editItem?.image ?? 'jig_example1.jpg',
+      image: finalImage,
       title: titleController.text,
       location: finalLocation,
       description: descriptionController.text,
@@ -126,6 +140,29 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    Widget preview;
+    if (pickedBytes != null) {
+      preview = Image.memory(pickedBytes!, fit: BoxFit.cover);
+    } else if (widget.editItem != null) {
+      final src = widget.editItem!.image;
+      if (src.startsWith('data:')) {
+        final comma = src.indexOf(',');
+        if (comma > 0) {
+          final b64 = src.substring(comma + 1);
+          final bytes = base64Decode(b64);
+          preview = Image.memory(bytes, fit: BoxFit.cover);
+        } else {
+          preview = const Center(child: Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
+        }
+      } else if (src.startsWith('http')) {
+        preview = Image.network(src, fit: BoxFit.cover);
+      } else {
+        preview = Image.asset(src, fit: BoxFit.cover);
+      }
+    } else {
+      preview = const Center(child: Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
+    }
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: Material(
@@ -138,7 +175,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 📸 사진 추가 버튼 + 카메라
                 Row(
                   children: [
                     const Icon(Icons.add_a_photo, color: Colors.black),
@@ -160,11 +196,16 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       onPressed: () => _pickImage(fromCamera: true),
                       child: const Text('카메라로 촬영'),
                     ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: '사진 제거',
+                      onPressed: (pickedBytes != null) ? _removeImage : null,
+                      icon: const Icon(Icons.delete_outline),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
 
-                // 🖼 썸네일 미리보기
                 Container(
                   width: double.infinity,
                   height: 160,
@@ -173,13 +214,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: pickedImage != null
-                      ? ClipRRect(
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(10),
-                    child: Image.file(File(pickedImage!.path), fit: BoxFit.cover),
-                  )
-                      : const Center(
-                    child: Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)),
+                    child: preview,
                   ),
                 ),
 
@@ -206,12 +243,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // ✅ 지그 사이즈
                 const Text("지그 사이즈", style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: ['소형', '중형', '대형'].map((s) {
+                  children: [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge].map((s) {
                     final isSelected = jigSize == s;
                     return ChoiceChip(
                       label: Text(s, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
@@ -224,7 +260,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // ✅ 보관 장소
                 const Text("보관 장소", style: TextStyle(fontWeight: FontWeight.bold)),
                 Wrap(
                   spacing: 8,
@@ -237,7 +272,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       backgroundColor: Colors.white,
                       onSelected: (_) => setState(() {
                         location = place;
-                        // 장소 변경 시 B동 관련 선택 초기화
                         if (location != '진량공장 B동') {
                           bDongSlot = null;
                           bDongFloor = null;
@@ -247,7 +281,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   }).toList(),
                 ),
 
-                // ✅ 진량공장 B동 선택 시: 슬롯 노출
                 if (location == '진량공장 B동') ...[
                   const SizedBox(height: 12),
                   const Text("지그 위치", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -263,14 +296,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         backgroundColor: Colors.white,
                         onSelected: (_) => setState(() {
                           bDongSlot = slot;
-                          // 슬롯 바꾸면 층 초기화
                           bDongFloor = null;
                         }),
                       );
                     }).toList(),
                   ),
-
-                  // ✅ 슬롯 선택되면: 층 노출
                   if (bDongSlot != null) ...[
                     const SizedBox(height: 12),
                     const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -293,7 +323,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
                 const SizedBox(height: 16),
 
-                // ✅ 보관 기한
                 const Text("보관 기한", style: TextStyle(fontWeight: FontWeight.bold)),
                 Row(
                   children: [

@@ -1,9 +1,32 @@
 // lib/widgets/jig_item_data.dart
+import 'dart:convert';
 
 /// 지그 아이템 데이터 모델
 /// - 대부분의 속성은 불변(final)
-/// - 좋아요 상태만 화면에서 토글 가능하도록 가변(likes, isLiked)
+/// - 좋아요 상태만 화면에서 토글 가능(likes, isLiked)
 class JigItemData {
+  static const String sizeSmall = '소형';
+  static const String sizeMedium = '중형';
+  static const String sizeLarge = '대형';
+
+  static const Set<String> allowedSizes = { sizeSmall, sizeMedium, sizeLarge };
+  static const Map<String, int> sizeWeights = {
+    sizeSmall: 1,
+    sizeMedium: 3,
+    sizeLarge: 5,
+  };
+
+  static DateTime? _parseDate(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is int) return DateTime.fromMillisecondsSinceEpoch(v);
+    if (v is String) {
+      if (v.trim().isEmpty) return null;
+      return DateTime.tryParse(v);
+    }
+    return null;
+  }
+
   // 기본 정보 (불변)
   final String image;
   final String title;
@@ -29,9 +52,11 @@ class JigItemData {
     this.disposalDate,
     this.likes = 0,
     this.isLiked = false,
-  });
+  })  : assert(image.isNotEmpty, 'image는 비어 있을 수 없습니다.'),
+        assert(title.isNotEmpty, 'title은 비어 있을 수 없습니다.'),
+        assert(location.isNotEmpty, 'location은 비어 있을 수 없습니다.'),
+        assert(allowedSizes.contains(size), 'size는 소형/중형/대형만 허용됩니다.');
 
-  /// 불변 필드를 유지하면서 일부만 바꾸고 싶을 때 사용
   JigItemData copyWith({
     String? image,
     String? title,
@@ -57,20 +82,36 @@ class JigItemData {
       isLiked: isLiked ?? this.isLiked,
     );
   }
-}
 
-/// 사이즈 → 포화도 가중치(소형 1, 중형 3, 대형 5)
-extension JigCapacity on JigItemData {
-  int get capacityWeight {
-    switch (size) {
-      case '소형':
-        return 1;
-      case '중형':
-        return 3;
-      case '대형':
-        return 5;
-      default:
-        return 1; // 안전값
-    }
-  }
+  int get capacityWeight => sizeWeights[size] ?? 1;
+
+  Map<String, dynamic> toMap() => {
+        'image': image,
+        'title': title,
+        'location': location,
+        'description': description,
+        'registrant': registrant,
+        'storageDate': storageDate?.toIso8601String(),
+        'disposalDate': disposalDate?.toIso8601String(),
+        'size': size,
+        'likes': likes,
+        'isLiked': isLiked,
+      };
+
+  factory JigItemData.fromMap(Map<String, dynamic> map) => JigItemData(
+        image: (map['image'] ?? '') as String,
+        title: (map['title'] ?? '') as String,
+        location: (map['location'] ?? '') as String,
+        description: (map['description'] ?? '') as String,
+        registrant: (map['registrant'] ?? '') as String,
+        storageDate: _parseDate(map['storageDate']),
+        disposalDate: _parseDate(map['disposalDate']),
+        size: (map['size'] ?? sizeSmall) as String,
+        likes: (map['likes'] ?? 0) as int,
+        isLiked: (map['isLiked'] ?? false) as bool,
+      );
+
+  String toJson() => jsonEncode(toMap());
+  factory JigItemData.fromJson(String source) =>
+      JigItemData.fromMap(jsonDecode(source) as Map<String, dynamic>);
 }
