@@ -1,4 +1,4 @@
-// lib/widgets/jig_form_bottom_sheet.dart
+// lib/widgets/jig_form_bottom_sheet.dart 수정본
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
