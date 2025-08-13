@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import '../../widgets/jig_item.dart';
 import '../../widgets/jig_item_data.dart';
 
+/// used/max 비율에 따른 색상(초→노→빨)
 Color colorForUtil({required int used, required int max}) {
   final _max = (max <= 0) ? 1 : max;
-  final u = used.clamp(0, _max) / _max;
+  final u = used.clamp(0, _max) / _max; // 0.0 ~ 1.0
   const a = 0.35;
   if (u <= 0) return Colors.green.withValues(alpha: a);
   if (u >= 1) return Colors.red.withValues(alpha: a);
@@ -21,7 +22,7 @@ class JinryangBDongMap extends StatefulWidget {
   final VoidCallback onBack;
   final List<JigItemData> allItems;
 
-  // 레거시 capacity(표시는 하지 않지만 기존 파라미터 유지)
+  // (유지용) 레거시 capacity 파라미터
   final int l1Floor1Capacity, l1Floor2Capacity, l1Floor3Capacity, l1Floor4Capacity;
   final int r1Floor1Capacity, r1Floor2Capacity, r1Floor3Capacity, r1Floor4Capacity;
   final int c1Floor1Capacity, c1Floor2Capacity, c1Floor3Capacity, c1Floor4Capacity;
@@ -60,11 +61,12 @@ class JinryangBDongMap extends StatefulWidget {
   final Map<String, Map<String, double>>? overlayFloorBtnHeightOverrideFracByShelf;
   final Map<String, Map<String, Offset>>? overlayFloorBtnOffsetOverrideFracByShelf;
 
+  // 초기 포커스
   final String? initialShelf;
   final String? initialFloor;
   final String? initialFZone;
 
-  /// (옵션) 외부에서 직접 소/중/대 → 1/3/5 매핑을 주고 싶을 때 사용
+  /// (옵션) 외부에서 가중치 커스텀(없으면 capacityWeight 사용)
   final int Function(JigItemData item)? weightOfItem;
 
   const JinryangBDongMap({
@@ -78,7 +80,7 @@ class JinryangBDongMap extends StatefulWidget {
     this.c1Floor1Capacity = 0, this.c1Floor2Capacity = 0, this.c1Floor3Capacity = 0, this.c1Floor4Capacity = 0,
     this.f1Capacity = 0, this.f2Capacity = 0, this.f3Capacity = 0, this.f4Capacity = 0,
 
-    // ✅ 상한 기본값 10 (대형 2개=10 → 바로 빨강)
+    // 기본 상한 (정책에 맞게 호출부에서 오버라이드 가능)
     this.maxCapacityShelves = 10,
     this.maxCapacityF = 10,
 
@@ -181,7 +183,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   @override
   void didUpdateWidget(covariant JinryangBDongMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 리스트/상한/매퍼 변경 시 즉시 재빌드
+    // 목록/상한/가중치 콜백 변경 시 즉시 반영
     if (oldWidget.allItems != widget.allItems ||
         oldWidget.maxCapacityF != widget.maxCapacityF ||
         oldWidget.maxCapacityShelves != widget.maxCapacityShelves ||
@@ -266,9 +268,14 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
           return Stack(children: [
             Positioned(
               left: offX, top: offY, width: dispW, height: dispH,
-              child: Image.asset('assets/bdong_map.png',
-                  width: dispW, height: dispH, fit: BoxFit.fill, filterQuality: FilterQuality.low,
-                  cacheWidth: (dispW * MediaQuery.of(context).devicePixelRatio).round()),
+              child: Image.asset(
+                'assets/bdong_map.png',
+                width: dispW,
+                height: dispH,
+                fit: BoxFit.fill,
+                filterQuality: FilterQuality.low,
+                cacheWidth: (dispW * MediaQuery.of(context).devicePixelRatio).round(),
+              ),
             ),
 
             // 선반 버튼
@@ -278,7 +285,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               return _ShelfButton(spec: s, rect: rect, onTap: () => _onShelfTap(s));
             }),
 
-            // F 버튼 (✅ allItems + size 가중치 합계로 색상)
+            // F 버튼(used=가중치 합계)
             ...fButtons.map((a) {
               final base = rectFromFrac(a.left, a.top, a.width, a.height);
               final rect = applyScale(base, a.label, isShelf: false);
@@ -295,8 +302,10 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
         Positioned(
           top: 12, left: 12,
           child: IconButton.filledTonal(
-            onPressed: widget.onBack, icon: const Icon(Icons.arrow_back),
-            style: IconButton.styleFrom(padding: const EdgeInsets.all(10)), tooltip: '뒤로',
+            onPressed: widget.onBack,
+            icon: const Icon(Icons.arrow_back),
+            style: IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+            tooltip: '뒤로',
           ),
         ),
       ]),
@@ -343,27 +352,10 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     }).toList();
   }
 
-  // -------- 가중치(소/중/대) 합산 --------
-  int _weightOf(JigItemData it) {
-    // 1) 외부 콜백이 있으면 우선 사용
-    if (widget.weightOfItem != null) return widget.weightOfItem!(it);
-
-    // 2) 콜백이 없으면 size에서 직접 매핑 (공백 제거)
-    final size = (it.size ?? '').replaceAll(' ', '');
-    switch (size) {
-      case '대형':
-      case '대':
-        return 5;
-      case '중형':
-      case '중':
-        return 3;
-      case '소형':
-      case '소':
-        return 1;
-      default:
-        return 1;
-    }
-  }
+  // -------- 가중치 합산 --------
+  /// 커스텀 콜백이 있으면 그 값을, 없으면 JigItemData.capacityWeight(소1/중3/대5)
+  int _weightOf(JigItemData it) =>
+      widget.weightOfItem?.call(it) ?? it.capacityWeight;
 
   int _usedWeightForShelfFloor(String shelf, String floor) =>
       _itemsForShelfFloor(shelf, floor).fold(0, (sum, it) => sum + _weightOf(it));
@@ -473,7 +465,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               final height = screen.height.clamp(320.0, 700.0).toDouble();
               final bgProvider = ResizeImage(AssetImage(imagePath), width: width.toInt());
 
-              // ✅ 층별 used = allItems에서 size 가중치 합계로 계산
+              // ✅ allItems에서 가중치 합계로 used 계산
               final u1 = _usedWeightForShelfFloor(label, '1층');
               final u2 = _usedWeightForShelfFloor(label, '2층');
               final u3 = _usedWeightForShelfFloor(label, '3층');
@@ -726,7 +718,8 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
         Positioned.fill(
           child: Image(
             image: widget.bgProviderOverride ?? ResizeImage(AssetImage(widget.imagePath), width: 1024),
-            fit: BoxFit.contain, filterQuality: FilterQuality.low,
+            fit: BoxFit.contain,
+            filterQuality: FilterQuality.low,
           ),
         ),
         Positioned.fill(
@@ -746,6 +739,7 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
               final btnW = dispW * wFrac;
               final btnH = quarterH * hFrac;
 
+              // 0(top)=4층 ... 3(bottom)=1층
               final baseNormY = (idx + widget.btnQuarterCenterYFrac) / 4.0;
               final scaledNormY = 0.5 + (baseNormY - 0.5) * widget.btnStackScaleY;
 
@@ -766,7 +760,8 @@ class _ShelfOverlayViewer4FloorsState extends State<ShelfOverlayViewer4Floors> {
               children: List.generate(floors.length, (i) {
                 final f = floors[i];
                 return _ZoneButtonRect(
-                  rect: rectFor(i, f.label), label: f.label,
+                  rect: rectFor(i, f.label),
+                  label: f.label,
                   color: colorForUtil(used: f.capacity, max: widget.maxCapacity),
                   radius: _btnRadius,
                   onTap: () {
@@ -806,7 +801,11 @@ class _ZoneButtonRect extends StatelessWidget {
         child: InkWell(
           onTap: onTap, borderRadius: BorderRadius.circular(radius),
           child: Center(
-              child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87))),
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87),
+            ),
+          ),
         ),
       ),
     );
@@ -883,7 +882,7 @@ class _JigListPanel extends StatelessWidget {
           registrant: it.registrant,
           likes: it.likes,
           isLiked: it.isLiked,
-          onLikePressed: () {},
+          onLikePressed: () {}, // 지도 내에서는 보기만
           storageDate: it.storageDate,
           disposalDate: it.disposalDate,
         );

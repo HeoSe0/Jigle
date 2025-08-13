@@ -5,8 +5,8 @@ import 'package:flutter/foundation.dart';
 import '../widgets/jig_item_data.dart';
 
 import '../map_page/jinryang_map.dart';
-import '../map_page/jinryang_maps/jinryang_a_dong_map.dart';
 import '../map_page/jinryang_maps/jinryang_b_dong_map.dart';
+import '../map_page/jinryang_maps/jinryang_a_dong_map.dart';
 import '../map_page/jinryang_maps/jinryang_main_building_map.dart';
 import '../map_page/jinryang_maps/jinryang_husaengdong_map.dart';
 import '../map_page/jinryang_maps/jinryang_singwan_map.dart';

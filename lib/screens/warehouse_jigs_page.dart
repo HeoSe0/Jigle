@@ -120,24 +120,6 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     return f;
   }
 
-  // ------- 가중치(소/중/대) -------
-
-  int _weightForSize(String sizeRaw) {
-    final size = sizeRaw.replaceAll(' ', '');
-    switch (size) {
-      case '대형':
-      case '대':
-        return 5;
-      case '중형':
-      case '중':
-        return 3;
-      case '소형':
-      case '소':
-      default:
-        return 1;
-    }
-  }
-
   // ------- 좋아요 보존 유틸 -------
 
   JigItemData _withPreservedLike({
@@ -246,7 +228,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     });
   }
 
-  // ------- B동 지도 띄우기 (핵심 수정) -------
+  // ------- B동 지도 띄우기 (포화도=capacityWeight 합산) -------
 
   void _openBDongMap() {
     final items = widget.jigsNotifier.value;
@@ -255,15 +237,12 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       builder: (_) => JinryangBDongMap(
         onBack: () => Navigator.pop(context),
 
-        // 🔑 맵이 내부에서 allItems + weightOfItem으로 가중치 합산하여 색상을 계산
+        // 지도 위젯이 allItems를 받아 JigItemData.capacityWeight(소1/중3/대5)로 합산
         allItems: items,
 
-        // 🔑 상한을 10으로 맞춤 (대형 2개 = 10 → 즉시 빨강)
-        maxCapacityShelves: 10,
-        maxCapacityF: 10,
-
-        // 🔑 등록 폼의 size 값을 그대로 1/3/5로 매핑해서 합산
-        weightOfItem: (JigItemData it) => _weightForSize(it.size),
+        // 색상 상한(정책에 맞게 조정 가능)
+        maxCapacityShelves: 10, // 선반/층 버튼 색상 상한
+        maxCapacityF: 10,       // F1~F4 버튼 색상 상한
       ),
     ));
   }

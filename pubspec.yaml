@@ -1,8 +1,8 @@
 name: jigle
 description: "SL JIG management application"
-publish_to: 'none' # private package, not for pub.dev
+publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: ^3.8.1
@@ -32,6 +32,7 @@ flutter:
     - assets/shelf_R1.png
     - assets/shelf_C1.png
     - assets/sl_logo.png
+
   fonts:
     - family: Pretendard-M
       fonts:
