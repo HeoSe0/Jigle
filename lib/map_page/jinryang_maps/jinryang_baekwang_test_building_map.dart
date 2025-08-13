@@ -22,7 +22,7 @@ class JinryangBaekwangTestBuildingMap extends StatelessWidget {
       barrierDismissible: true,
       builder: (_) => AlertDialog(
         title: Text('$label 이미지'),
-        content: Image.asset('assets/sample_box1.png', fit: BoxFit.cover),
+        content: Image.asset('assets/shelf_empty.png', fit: BoxFit.cover),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),

@@ -60,8 +60,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   void initState() {
     super.initState();
     titleController = TextEditingController(text: widget.editItem?.title ?? '');
-    descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
-    registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
+    descriptionController =
+        TextEditingController(text: widget.editItem?.description ?? '');
+    registrantController =
+        TextEditingController(text: widget.editItem?.registrant ?? '');
 
     _restoreLocationFromEdit(widget.editItem?.location);
     jigSize = widget.editItem?.size ?? jigSize;
@@ -73,7 +75,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       final it = widget.editItem!;
       if ((it.images).isNotEmpty) {
         _images.addAll(it.images);
-        _thumbIndex = (it.thumbnailIndex >= 0 && it.thumbnailIndex < it.images.length)
+        _thumbIndex = (it.thumbnailIndex >= 0 &&
+            it.thumbnailIndex < it.images.length)
             ? it.thumbnailIndex
             : 0;
       } else if (it.image.trim().isNotEmpty) {
@@ -95,7 +98,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
         if (location == '진량공장 B동') {
           if (slot != null && _bdongSlots.contains(slot)) bDongSlot = slot;
-          if (floor != null && _bdongSlotsNeedFloor.contains(bDongSlot ?? '') && _floors.contains(floor)) {
+          if (floor != null &&
+              _bdongSlotsNeedFloor.contains(bDongSlot ?? '') &&
+              _floors.contains(floor)) {
             bDongFloor = floor;
           } else {
             bDongFloor = null;
@@ -114,7 +119,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           baekFloor = null;
         }
       } else {
-        location = _locations.contains(incomingLocation) ? incomingLocation : _locations.first;
+        location = _locations.contains(incomingLocation)
+            ? incomingLocation
+            : _locations.first;
       }
     } else {
       location = _locations.first;
@@ -138,7 +145,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       return;
     }
 
-    final files = await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85);
+    final files = await picker.pickMultiImage(
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
     if (!mounted || files.isEmpty) return;
 
     final adding = files.take(remain);
@@ -157,7 +167,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       _toast('최대 $_maxImages장까지 등록할 수 있어요.');
       return;
     }
-    final shot = await picker.pickImage(source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+    final shot = await picker.pickImage(
+      source: ImageSource.camera,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
     if (shot == null) return;
     final bytes = await shot.readAsBytes();
     if (!mounted) return;
@@ -199,6 +213,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
+    return;
   }
 
   // ── 제출 ────────────────────────────────────────────────────────────────
@@ -209,7 +224,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     if (location == '진량공장 B동') {
       if (bDongSlot != null && bDongSlot!.isNotEmpty) {
         finalLocation = '$finalLocation / $bDongSlot';
-        if (_bdongSlotsNeedFloor.contains(bDongSlot!) && bDongFloor != null && bDongFloor!.isNotEmpty) {
+        if (_bdongSlotsNeedFloor.contains(bDongSlot!) &&
+            bDongFloor != null &&
+            bDongFloor!.isNotEmpty) {
           finalLocation = '$finalLocation / $bDongFloor';
         }
       }
@@ -223,10 +240,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     }
 
     // 대표 썸네일(없으면 기본)
-    final String finalThumb =
-    _images.isNotEmpty ? _images[_thumbIndex] : (widget.editItem?.image ?? 'jig_example1.jpg');
+    final String finalThumb = _images.isNotEmpty
+        ? _images[_thumbIndex]
+        : (widget.editItem?.image ?? 'jig_example1.png');
 
-    // ✨ images/thumbnailIndex 지원 시 사용 (없어도 컴파일되도록 해당 필드가 선택적이어야 함)
+    // ✨ JigItemData(images/thumbnailIndex) 지원 시 보존됨. (없어도 컴파일/동작 OK)
     final newJig = JigItemData(
       image: finalThumb,
       title: titleController.text,
@@ -236,6 +254,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
+      // 아래 두 필드는 jig_item_data.dart에 추가되어 있어도/없어도 안전하게 동작하도록
+      // 기본값이 존재(옵션)해야 합니다.
       images: List<String>.from(_images),
       thumbnailIndex: _thumbIndex,
     );
@@ -253,7 +273,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return SizedBox(
       height: _CHIP_HEIGHT_BDONG,
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(color: selected ? Colors.white : Colors.black)),
+        label: Text(label,
+            style: TextStyle(color: selected ? Colors.white : Colors.black)),
         selected: selected,
         selectedColor: Colors.blue,
         backgroundColor: Colors.white,
@@ -287,7 +308,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           backgroundColor: selected ? Colors.blue : Colors.white,
           foregroundColor: selected ? Colors.white : Colors.black,
           side: BorderSide(color: selected ? Colors.blue : Colors.black12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         onPressed: onTap,
@@ -304,14 +326,17 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         ? Image(image: _providerFor(_images[_thumbIndex]), fit: BoxFit.cover)
         : (widget.editItem != null && widget.editItem!.image.trim().isNotEmpty)
         ? Image(image: _providerFor(widget.editItem!.image), fit: BoxFit.cover)
-        : const Center(child: Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
+        : const Center(
+        child: Text('썸네일 미리보기 없음',
+            style: TextStyle(color: Colors.black54)));
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: Material(
         color: Colors.white,
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -368,7 +393,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _images.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
@@ -390,41 +416,21 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                               ),
                             ),
                           ),
-                          // ✅ 대표 표시(노란 배지 + 아이콘)
-                          if (selected)
-                            Positioned(
-                              right: 6,
-                              top: 6,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber,
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: const [
-                                    BoxShadow(
-                                      color: Color(0x33000000),
-                                      blurRadius: 2,
-                                      offset: Offset(0, 1),
-                                    )
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: const [
-                                    Icon(Icons.star_border, size: 14, color: Colors.black87),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      '대표',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          // 대표 표시
+                          Positioned(
+                            right: 6,
+                            top: 6,
+                            child: CircleAvatar(
+                              radius: 12,
+                              backgroundColor:
+                              selected ? Colors.blue : Colors.black45,
+                              child: Icon(
+                                selected ? Icons.star : Icons.star_border,
+                                size: 16,
+                                color: Colors.white,
                               ),
                             ),
+                          ),
                           // 삭제 버튼
                           Positioned(
                             left: 6,
@@ -473,7 +479,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge].map((s) {
+                  children: [
+                    JigItemData.sizeSmall,
+                    JigItemData.sizeMedium,
+                    JigItemData.sizeLarge
+                  ].map((s) {
                     final isSelected = jigSize == s;
                     return _chip44(
                       label: s,
@@ -534,7 +544,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       );
                     }).toList(),
                   ),
-                  if (bDongSlot != null && _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                  if (bDongSlot != null &&
+                      _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
                     const SizedBox(height: 12),
                     const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
@@ -551,7 +562,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       }).toList(),
                     ),
                   ],
-                  if (bDongSlot != null && !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                  if (bDongSlot != null &&
+                      !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
                     const SizedBox(height: 12),
                     const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
@@ -631,7 +643,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 Row(
                   children: [
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                      style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -642,13 +655,16 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         if (picked != null) setState(() => startDate = picked);
                       },
                       child: Text(
-                        startDate == null ? '보관 날짜' : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
+                        startDate == null
+                            ? '보관 날짜'
+                            : '${startDate!.year}-${startDate!.month}-${startDate!.day}',
                         style: const TextStyle(color: Colors.black),
                       ),
                     ),
                     const SizedBox(width: 10),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+                      style:
+                      ElevatedButton.styleFrom(backgroundColor: Colors.white),
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
@@ -659,7 +675,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         if (picked != null) setState(() => endDate = picked);
                       },
                       child: Text(
-                        endDate == null ? '폐기 날짜' : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
+                        endDate == null
+                            ? '폐기 날짜'
+                            : '${endDate!.year}-${endDate!.month}-${endDate!.day}',
                         style: const TextStyle(color: Colors.black),
                       ),
                     ),
