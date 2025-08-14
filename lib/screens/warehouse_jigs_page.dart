@@ -1,4 +1,3 @@
-// lib/screens/warehouse_jigs_page.dart
 import 'package:flutter/material.dart';
 
 import '../widgets/jig_item.dart';
@@ -24,16 +23,17 @@ class WarehouseJigsPage extends StatefulWidget {
 }
 
 class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
+  // 상위 장소 우선순위(앞일수록 기본 선택 우선)
   static const List<String> _preferLocations = [
     '진량공장 B동',
     '배광시험동 2층',
     '후생동 4층',
   ];
 
-  String? _selectedLocation;
+  String? _selectedLocation; // 상위(부모) 장소
   String _selectedSort = '최신순';
 
-  // ====== 추가: 지도 열기 중복/로딩 제어 ======
+  // ====== 지도 열기 중복/로딩 제어 ======
   bool _openingMap = false;
 
   Future<void> _precacheAssets(List<String> assetPaths) async {
@@ -51,7 +51,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     if (_openingMap) return;
     _openingMap = true;
 
-    // 로딩 다이얼로그
+    // 로딩
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -76,7 +76,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       _openingMap = false;
     }
   }
-  // =======================================
+  // ===================================
 
   @override
   void initState() {
@@ -96,6 +96,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     setState(_ensureSelectedLocation);
   }
 
+  // ------- 장소 유틸 -------
+  // '진량공장 B동 / L1 / 2층' → '진량공장 B동'
   String _parentOf(String loc) {
     final t = loc.trim();
     if (!t.contains('/')) return t;
@@ -106,6 +108,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     final items = widget.jigsNotifier.value;
     final set = <String>{for (final it in items) _parentOf(it.location)};
     final list = set.toList()..sort();
+    // 우선순위 반영
     list.sort((a, b) {
       final ia = _preferLocations.indexOf(a);
       final ib = _preferLocations.indexOf(b);
@@ -133,6 +136,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     }
   }
 
+  // ------- 정렬/필터 -------
   DateTime _dateOrEpoch(DateTime? d) =>
       d ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -140,6 +144,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     final all = widget.jigsNotifier.value;
     final parent = _selectedLocation;
     if (parent == null) return const [];
+
     final f = all.where((e) => _parentOf(e.location) == parent).toList();
 
     if (_selectedSort == '이름순') {
@@ -154,6 +159,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     return f;
   }
 
+  // ------- 가중치(소/중/대) -------
   int _weightForSize(String sizeRaw) {
     final size = sizeRaw.replaceAll(' ', '');
     switch (size) {
@@ -170,6 +176,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     }
   }
 
+  // ------- 좋아요 보존 유틸 -------
   JigItemData _withPreservedLike({
     required JigItemData edited,
     required JigItemData old,
@@ -185,6 +192,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     }
   }
 
+  // ------- 추가/수정/삭제/좋아요 -------
   void _showAddOrEditJigDialog({JigItemData? editItem, int? editIndex}) {
     showModalBottomSheet(
       context: context,
@@ -220,7 +228,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
-        title: const Text('삭제하시겠습니까?', style: TextStyle(color: Colors.black)),
+        title:
+        const Text('삭제하시겠습니까?', style: TextStyle(color: Colors.black)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('아니오')),
           TextButton(
@@ -230,9 +239,11 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                 final removed = list.removeAt(index);
                 widget.jigsNotifier.value = list;
 
-                final liked = List<JigItemData>.from(widget.likedItemsNotifier.value);
+                final liked =
+                List<JigItemData>.from(widget.likedItemsNotifier.value);
                 if (liked.remove(removed)) {
-                  widget.likedItemsNotifier.value = List<JigItemData>.from(liked);
+                  widget.likedItemsNotifier.value =
+                  List<JigItemData>.from(liked);
                 }
               });
               Navigator.pop(ctx);
@@ -246,7 +257,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
 
   void _toggleLike(JigItemData item) {
     setState(() {
-      final currentLiked = List<JigItemData>.from(widget.likedItemsNotifier.value);
+      final currentLiked =
+      List<JigItemData>.from(widget.likedItemsNotifier.value);
       final alreadyLiked = currentLiked.contains(item);
 
       if (!alreadyLiked) {
@@ -262,9 +274,49 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     });
   }
 
+  // ------- B동 초기 포커스 추정 (최근 항목 기준) -------
+  String? _slotOf(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    return p.length > 1 ? p[1] : null;
+  }
+
+  String? _floorOf(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    if (p.length > 2) {
+      final m = RegExp(r'(\d)').firstMatch(p[2]);
+      if (m != null) return '${m.group(1)}층';
+    }
+    return null;
+  }
+
+  ({String? fzone, String? shelf, String? floor}) _inferInitialFocusForBDong(
+      List<JigItemData> items) {
+    final sorted = List<JigItemData>.from(items)
+      ..sort((a, b) =>
+          _dateOrEpoch(b.storageDate).compareTo(_dateOrEpoch(a.storageDate)));
+
+    for (final it in sorted) {
+      final loc = it.location.trim();
+      if (!loc.startsWith('진량공장 B동')) continue;
+      final slot = _slotOf(loc);
+      if (slot == null) continue;
+
+      if (slot.startsWith('F')) {
+        return (fzone: slot, shelf: null, floor: null);
+      }
+      final fl = _floorOf(loc);
+      if (fl != null) {
+        return (fzone: null, shelf: slot, floor: fl);
+      }
+    }
+    return (fzone: null, shelf: null, floor: null);
+  }
+
   // ====== 지도 열기 (프리캐시 + 로딩) ======
   void _openBDongMap() {
     final items = widget.jigsNotifier.value;
+    final focus = _inferInitialFocusForBDong(items);
+
     _openMapSafely(
       assetsToPrecache: const [
         'assets/bdong_map.png',
@@ -274,10 +326,25 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       ],
       buildPage: () => JinryangBDongMap(
         onBack: () => Navigator.pop(context),
-        allItems: items,
+        // 실시간 포화도 반영
+        jigsListenable: widget.jigsNotifier,
+        allItems: items, // 스냅샷(백업)
+
+        // 최근 항목 위치로 자동 포커스
+        initialFZone: focus.fzone,
+        initialShelf: focus.shelf,
+        initialFloor: focus.floor,
+
         maxCapacityShelves: 10,
         maxCapacityF: 10,
         weightOfItem: (JigItemData it) => _weightForSize(it.size),
+
+        // 지도에서 '+ 지그 등록' → 상위 리스트 갱신
+        onCreateJig: (newJig) {
+          final list = List<JigItemData>.from(widget.jigsNotifier.value);
+          list.insert(0, newJig);
+          widget.jigsNotifier.value = list;
+        },
       ),
     );
   }
@@ -285,25 +352,22 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
   void _openBaekwangMap() {
     final items = widget.jigsNotifier.value;
     _openMapSafely(
-      assetsToPrecache: const [
-        // 배광시험동에서 사용하는 자산을 여기에 추가
-        'assets/shelf_empty.png',
-      ],
+      assetsToPrecache: const ['assets/shelf_empty.png'],
       buildPage: () => JinryangBaekwangTestBuildingMap(
         onBack: () => Navigator.pop(context),
-        // 최신 지도 위젯이 allItems/maxCapacityPerFloor/weightOfItem를 받도록 구현되어 있다면 아래 인자 유지
         allItems: items,
         maxCapacityPerFloor: 10,
         weightOfItem: (JigItemData it) => _weightForSize(it.size),
       ),
     );
   }
-  // =======================================
+  // ===================================
 
   @override
   Widget build(BuildContext context) {
     final items = _filtered;
 
+    // 현재 선택 장소에 맞는 지도 액션
     VoidCallback? _mapAction;
     if (_selectedLocation == '진량공장 B동') {
       _mapAction = _openBDongMap;
@@ -341,7 +405,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
             TextButton.icon(
               onPressed: _mapAction,
               icon: const Icon(Icons.map, color: Colors.black),
-              label: const Text('지도 보기', style: TextStyle(color: Colors.black)),
+              label: const Text('지도 보기',
+                  style: TextStyle(color: Colors.black)),
             ),
         ],
       ),
@@ -431,6 +496,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
         ],
       ),
 
+      // + 지그 등록
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOrEditJigDialog(),
         label: const Text('+ 지그 등록'),

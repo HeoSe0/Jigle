@@ -1,4 +1,3 @@
-// lib/widgets/jig_form_bottom_sheet.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,7 +7,15 @@ class JigFormBottomSheet extends StatefulWidget {
   final JigItemData? editItem;
   final Function(JigItemData) onSubmit;
 
-  const JigFormBottomSheet({super.key, this.editItem, required this.onSubmit});
+  // 맵에서 보낸 최초 위치 프리필
+  final String? initialLocation;
+
+  const JigFormBottomSheet({
+    super.key,
+    this.editItem,
+    required this.onSubmit,
+    this.initialLocation,
+  });
 
   @override
   State<JigFormBottomSheet> createState() => _JigFormBottomSheetState();
@@ -21,7 +28,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   static const List<String> _floors = ['1층', '2층', '3층', '4층'];
   static const Set<String> _bdongSlotsNeedFloor = {'L1', 'C1', 'R1'};
 
-  static const int _baekMax = 24; // 배광시험동 슬롯 수 (R1~R24, L1~L24)
+  static const int _baekMax = 24; // 배광시험동 슬롯 수
   static const List<String> _baekFloors = ['1층', '2층', '3층', '4층', '5층'];
 
   static const int _maxImages = 5;
@@ -61,39 +68,22 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
     registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
 
-    _restoreLocationFromEdit(widget.editItem?.location);
-    jigSize = widget.editItem?.size ?? jigSize;
-    startDate = widget.editItem?.storageDate;
-    endDate = widget.editItem?.disposalDate;
+    // editItem.location 없으면 initialLocation으로 프리필
+    final incomingLocation = widget.editItem?.location ?? widget.initialLocation;
 
-    if (widget.editItem != null && widget.editItem!.image.trim().isNotEmpty) {
-      _images.add(widget.editItem!.image);
-      _thumbIndex = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    titleController.dispose();
-    descriptionController.dispose();
-    registrantController.dispose();
-    super.dispose();
-  }
-
-  // ---- 위치 복구 ----
-  void _restoreLocationFromEdit(String? incomingLocation) {
     if (incomingLocation != null && incomingLocation.trim().isNotEmpty) {
       if (incomingLocation.contains('/')) {
         final parts = incomingLocation.split('/').map((s) => s.trim()).toList();
         final parent = parts.isNotEmpty ? parts[0] : '진량공장 B동';
-        final slot = parts.length > 1 ? parts[1] : null;
-        final floor = parts.length > 2 ? parts[2] : null;
+        final slot   = parts.length > 1 ? parts[1] : null;
+        final floor  = parts.length > 2 ? parts[2] : null;
 
         location = _locations.contains(parent) ? parent : _locations.first;
 
         if (location == '진량공장 B동') {
           if (slot != null && _bdongSlots.contains(slot)) bDongSlot = slot;
-          if (floor != null && _bdongSlotsNeedFloor.contains(bDongSlot ?? '') && _floors.contains(floor)) {
+          if (slot != null && _bdongSlotsNeedFloor.contains(slot)
+              && floor != null && _floors.contains(floor)) {
             bDongFloor = floor;
           } else {
             bDongFloor = null;
@@ -112,11 +102,25 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           baekFloor = null;
         }
       } else {
-        location = _locations.contains(incomingLocation) ? incomingLocation : _locations.first;
+        location = _locations.contains(incomingLocation)
+            ? incomingLocation
+            : _locations.first;
       }
     } else {
       location = _locations.first;
     }
+
+    jigSize   = widget.editItem?.size ?? jigSize;
+    startDate = widget.editItem?.storageDate;
+    endDate   = widget.editItem?.disposalDate;
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    descriptionController.dispose();
+    registrantController.dispose();
+    super.dispose();
   }
 
   // ---- 이미지 선택 ----
@@ -222,6 +226,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   // ---- 제출 ----
   void _submit() {
+    if (titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('제목을 입력해주세요.')),
+      );
+      return;
+    }
     String finalLocation = location;
     if (location == '진량공장 B동') {
       if (bDongSlot != null && bDongSlot!.isNotEmpty) {
@@ -355,17 +365,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       child: const Text('카메라로 촬영'),
                     ),
                     const Spacer(),
-
-                    // 뒤로가기 버튼
                     IconButton(
                       tooltip: '뒤로가기',
                       onPressed: () => Navigator.maybePop(context),
                       icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
                     ),
-                    // 🔧 간격을 12로 늘림 (기존 4)
                     const SizedBox(width: 12),
-
-                    // 이미지 카운터
                     Text('${_images.length}/$_maxImages'),
                   ],
                 ),
