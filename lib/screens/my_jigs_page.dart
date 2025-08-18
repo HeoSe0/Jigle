@@ -151,7 +151,7 @@ class QuickActions extends StatelessWidget {
         children: [
           _IconBox(icon: Icons.favorite_border, label: '관심목록', onTap: onTapLiked),
           _IconBox(icon: Icons.history, label: '최근 본 글', onTap: onTapRecent),
-          _IconBox(icon: Icons.star_border, label: '이벤트', onTap: onTapEvent),
+          _IconBox(icon: Icons.star_border, label: '공지사항', onTap: onTapEvent),
         ],
       ),
     );

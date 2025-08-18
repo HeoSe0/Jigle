@@ -93,7 +93,7 @@ class MyJigsPage extends StatelessWidget {
                   _buildIconBox(
                     context,
                     Icons.star_border,
-                    '이벤트',
+                    '공지사항',
                     const EventScreen(),
                   ),
                 ],

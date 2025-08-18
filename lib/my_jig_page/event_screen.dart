@@ -7,9 +7,9 @@ class EventScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('이벤트'),
+      appBar: AppBar(title: const Text('공지사항'),
         backgroundColor: Colors.white,),
-      body: const Center(child: Text('이벤트 화면')),
+      body: const Center(child: Text('공지사항 화면')),
     );
   }
 }
