@@ -3,21 +3,24 @@ import 'package:flutter/material.dart';
 import '../../widgets/jig_item_data.dart';
 import '../../widgets/jig_item.dart';
 
-// 공용: 사용률에 따른 색상
-Color _colorForUtil({required int used, required int max}) {
+/// B동과 동일한 포화도 색상(알파 조절 가능)
+Color _colorForUtil({
+  required int used,
+  required int max,
+  double alpha = 0.35,
+}) {
   final m = (max <= 0) ? 1 : max;
   final u = (used.clamp(0, m)) / m;
-  const a = 0.35;
-  if (u <= 0) return Colors.green.withValues(alpha: a);
-  if (u >= 1) return Colors.red.withValues(alpha: a);
+  if (u <= 0) return Colors.green.withOpacity(alpha);
+  if (u >= 1) return Colors.red.withOpacity(alpha);
   const mid = 0.6;
   final base = (u < mid)
       ? Color.lerp(Colors.green, Colors.yellow, u / mid)!
       : Color.lerp(Colors.yellow, Colors.red, (u - mid) / (1 - mid))!;
-  return base.withValues(alpha: a);
+  return base.withOpacity(alpha);
 }
 
-/// 배광시험동 2층 – R1~R24 / L1~L24 (각 슬롯 1~5층) 지도
+/// 배광시험동 2층 – R1~R24 / L1~L20 (각 슬롯 1~5층)
 class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   final VoidCallback onBack;
   final List<JigItemData> allItems;
@@ -31,10 +34,10 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   /// 🔧 층 버튼/레이아웃 커스터마이즈
   final double floorBtnWidthFrac;          // 0~1, 버튼 너비 비율
   final double floorBtnHeightFracOfFifth;  // 0~1, 각 1/5 스트립 대비 버튼 높이
-  final double floorBtnGap;                // 버튼 사이 세로 간격(px) — 총 4개 갭
+  final double floorBtnGap;                // 버튼 사이 세로 간격(px)
   final double floorBtnRadius;             // 버튼 모서리(px)
   final EdgeInsets overlayPadding;         // 배경 이미지 안쪽 패딩
-  final double floorButtonsYOffsetPx;      // ▶ 전체 버튼 스택 상하 이동(px, 음수면 위로)
+  final double floorButtonsYOffsetPx;      // 전체 버튼 스택 상하 이동(px)
 
   const JinryangBaekwangTestBuildingMap({
     super.key,
@@ -62,11 +65,7 @@ class _JinryangBaekwangTestBuildingMapState
   static const double _kBtnH = 160;
   static const double _kGapV = 8;
   static const double _kColGap = 70;
-  static const int _kItemsPerColumn = 12;
-
   static double get _rowWidth => _kBtnW * 2 + _kColGap;
-  static double get _rowHeight =>
-      _kItemsPerColumn * _kBtnH + (_kItemsPerColumn - 1) * _kGapV;
 
   // ===== Util =====
   int _weight(JigItemData it) {
@@ -111,11 +110,30 @@ class _JinryangBaekwangTestBuildingMapState
     return list.fold<int>(0, (s, it) => s + _weight(it));
   }
 
+  // ▶ 슬롯(5층 합계) 사용량
+  int _usedTotalForSlot(String slot) {
+    const floors = ['1층', '2층', '3층', '4층', '5층'];
+    var sum = 0;
+    for (final f in floors) {
+      sum += _usedFor(slot, f);
+    }
+    return sum;
+  }
+
+  /// ▶ 슬롯 버튼 색상 (B동과 동일 기준)
+  ///  - 슬롯은 배경 위에서 확실히 보이도록 alpha를 크게
+  Color _slotColor(String slot) {
+    final used = _usedTotalForSlot(slot);
+    final max = widget.maxCapacityPerFloor * 5; // 5층 합계 기준
+    return _colorForUtil(used: used, max: max, alpha: 0.8);
+  }
+
   // ===== UI: 버튼들 =====
   Widget _buildShelfColumn(List<String> labels, BuildContext context) {
     return Column(
       children: List.generate(labels.length, (i) {
         final label = labels[i];
+        final capColor = _slotColor(label);
         return SizedBox(
           width: _kBtnW,
           height: _kBtnH,
@@ -123,13 +141,15 @@ class _JinryangBaekwangTestBuildingMapState
             padding: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : _kGapV),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.lightBlue.shade100,
+                backgroundColor: capColor,          // 포화도 색상(불투명)
                 foregroundColor: Colors.black,
                 shape: const RoundedRectangleBorder(
                   side: BorderSide(color: Colors.black),
                   borderRadius: BorderRadius.zero,
                 ),
                 padding: EdgeInsets.zero,
+                elevation: 0,
+                shadowColor: Colors.transparent,
               ),
               onPressed: () => _openSlotDialog(context, label),
               child: Text(label),
@@ -145,21 +165,62 @@ class _JinryangBaekwangTestBuildingMapState
     required List<String> leftLabels,
     required BuildContext context,
   }) {
+    final rCount = rightLabels.length;
+    final lCount = leftLabels.length;
+    final maxCount = rCount > lCount ? rCount : lCount;
+    final rowHeight = maxCount * _kBtnH + (maxCount - 1) * _kGapV;
+
+    // 중앙 통로 위치/크기
+    final corridorLeft = _kBtnW;
+    final corridorWidth = _kColGap;
+
+    const yellowLineWidth = 5.0;
+    const yellowEdgeInset = 0.0;
+
     return Center(
       child: SizedBox(
         width: _rowWidth,
-        height: _rowHeight,
+        height: rowHeight,
         child: Stack(
           children: [
-            // 중앙 박스 (좌/우 컬럼 사이)
+            // 바깥 테두리 + 내부 초록 배경(슬롯 사이 여백 포함)
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.black, width: 5),
+                  color: Colors.green.shade800,
                 ),
               ),
             ),
-            // 좌/우 버튼 컬럼
+
+            // 중앙 통로: 진녹색 + 양옆 노란 라인
+            Positioned(
+              left: corridorLeft,
+              top: 0,
+              width: corridorWidth,
+              height: rowHeight,
+              child: Stack(
+                children: [
+                  Positioned.fill(child: Container(color: Colors.green.shade800)),
+                  Positioned(
+                    left: yellowEdgeInset,
+                    top: 0,
+                    bottom: 0,
+                    width: yellowLineWidth,
+                    child: Container(color: Colors.yellowAccent),
+                  ),
+                  Positioned(
+                    right: yellowEdgeInset,
+                    top: 0,
+                    bottom: 0,
+                    width: yellowLineWidth,
+                    child: Container(color: Colors.yellowAccent),
+                  ),
+                ],
+              ),
+            ),
+
+            // 좌/우 슬롯 버튼 컬럼
             Positioned(left: 0, top: 0, child: _buildShelfColumn(rightLabels, context)),
             Positioned(right: 0, top: 0, child: _buildShelfColumn(leftLabels, context)),
           ],
@@ -180,7 +241,6 @@ class _JinryangBaekwangTestBuildingMapState
             return AlertDialog(
               titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-              // 상단: 슬롯명(좌) + 선택된 층(우, 투명)
               title: Row(
                 children: [
                   Expanded(
@@ -231,13 +291,16 @@ class _JinryangBaekwangTestBuildingMapState
                             registrant: it.registrant,
                             likes: it.likes,
                             isLiked: it.isLiked,
-                            onLikePressed: () {}, // 필요 시 연결
+                            onLikePressed: () {},
                             storageDate: it.storageDate,
                             disposalDate: it.disposalDate,
+                            // 배지용(프로젝트에 맞게 필드가 있다면 표시)
+                            size: it.size,
+                            jigHeight: it.jigHeight,
                           );
                         },
                       ),
-                      onBack: onBack, // 층 화면으로 전환
+                      onBack: onBack,
                     );
                   },
                   // 🔧 크기/간격/이동 파라미터 전달
@@ -267,8 +330,15 @@ class _JinryangBaekwangTestBuildingMapState
 
   @override
   Widget build(BuildContext context) {
-    final leftLabels = List.generate(24, (i) => 'L${i + 1}');
-    final rightLabels = List.generate(24, (i) => 'R${i + 1}');
+    // ✅ L은 1~20, R은 1~24
+    final leftLabelsAll  = List.generate(20, (i) => 'L${i + 1}');
+    final rightLabelsAll = List.generate(24, (i) => 'R${i + 1}');
+
+    // 상단/하단 분할 (R: 12/12, L: 10/10)
+    final rightTop    = rightLabelsAll.sublist(0, 12);
+    final rightBottom = rightLabelsAll.sublist(12);
+    final leftTop     = leftLabelsAll.sublist(0, 10);
+    final leftBottom  = leftLabelsAll.sublist(10);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -276,28 +346,43 @@ class _JinryangBaekwangTestBuildingMapState
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 32),
-              child: Column(
-                children: [
-                  const Column(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Center(
+                child: Container(
+                  // ▶ 베이지 사각형으로 주변을 감싸기
+                  width: _rowWidth + 120, // 슬롯행 너비 + 여유
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF2DEBC), // 베이지
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
                     children: [
-                      Text('IN', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
-                      Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
-                      SizedBox(height: 20),
+                      const Column(
+                        children: [
+                          Text('IN',
+                              style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold)),
+                          Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
+                          SizedBox(height: 20),
+                        ],
+                      ),
+                      _buildShelfRow(
+                        rightLabels: rightTop,
+                        leftLabels: leftTop,
+                        context: context,
+                      ),
+                      const SizedBox(height: 50),
+                      _buildShelfRow(
+                        rightLabels: rightBottom,
+                        leftLabels: leftBottom,
+                        context: context,
+                      ),
                     ],
                   ),
-                  _buildShelfRow(
-                    rightLabels: rightLabels.sublist(0, 12),
-                    leftLabels: leftLabels.sublist(0, 12),
-                    context: context,
-                  ),
-                  const SizedBox(height: 50),
-                  _buildShelfRow(
-                    rightLabels: rightLabels.sublist(12),
-                    leftLabels: leftLabels.sublist(12),
-                    context: context,
-                  ),
-                ],
+                ),
               ),
             ),
             Positioned(
@@ -335,7 +420,8 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
   final int Function(String floorLabel) capacityForFloor;
 
   /// 상세 패널(지그 카드 리스트 등)
-  final Widget Function(String slotLabel, String floorLabel, VoidCallback onBack) detailsBuilder;
+  final Widget Function(String slotLabel, String floorLabel, VoidCallback onBack)
+  detailsBuilder;
 
   /// 🔧 크기/간격 파라미터
   final double floorBtnWidthFrac;          // 0~1
@@ -375,7 +461,7 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
   }
 
   Widget _buildFloorsOverlay(BuildContext context) {
-    // shelf_empty.png 위에 5층 버튼 수직 배치 (크기/간격/위치 커스터마이즈)
+    // shelf_empty.png 위에 5층 버튼 수직 배치
     return LayoutBuilder(
       key: const ValueKey('floors'),
       builder: (context, c) {
@@ -384,9 +470,9 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
         final innerW = (W - pad.horizontal).clamp(0.0, double.infinity);
         final innerH = (H - pad.vertical).clamp(0.0, double.infinity);
 
-        // ✅ 총 4개의 gap 반영 후 스트립 높이 산출
+        // 총 4개의 gap 반영 후 스트립 높이
         final totalGap = floorBtnGap * 4.0;
-        final stripH = (innerH - totalGap) / 5.0;
+        final stripH = (innerH - totalGap) / 5.6;
 
         final btnH = stripH * floorBtnHeightFracOfFifth;
         final btnW = innerW * floorBtnWidthFrac;
@@ -408,8 +494,8 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
           final used = capacityForFloor(floorLabel);
 
           final top = pad.top
-              + floorButtonsYOffsetPx              // ▶ 전체 스택 상하 이동
-              + i * (stripH + floorBtnGap)          // ✅ 간격 반영
+              + floorButtonsYOffsetPx
+              + i * (stripH + floorBtnGap)
               + inStripOffset;
 
           children.add(
@@ -417,9 +503,10 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
               left: left,
               top: top,
               width: btnW,
-              height: btnH,
+              height: 58,
               child: Material(
-                color: _colorForUtil(used: used, max: maxCapacity),
+                // 복도(층) 버튼은 더 뚜렷하게 보이도록 alpha를 높임
+                color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
                 borderRadius: BorderRadius.circular(floorBtnRadius),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(floorBtnRadius),
@@ -452,7 +539,7 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
   }
 }
 
-/// 상세 패널(층 선택 후): 지그 리스트 + 하단 '돌아가기' 버튼(배경 투명)
+/// 상세 패널(층 선택 후): 지그 리스트 + 하단 '돌아가기' 버튼
 class _BaekJigDetailPanel extends StatelessWidget {
   final Widget child;
   final VoidCallback onBack;
