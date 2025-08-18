@@ -1,5 +1,6 @@
 // lib/screens/main_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // ✅ ValueNotifier/ValueListenable
 
 import '../widgets/jig_item_data.dart';
 import '../widgets/home_search_tab.dart';
@@ -20,7 +21,7 @@ class _MainPageState extends State<MainPage> {
   // ✅ 앱 전역에서 공유할 지그 리스트
   final ValueNotifier<List<JigItemData>> _jigsNotifier =
   ValueNotifier<List<JigItemData>>([
-    // 초기 샘플이 필요하면 여기에 추가하세요.
+    // 초기 샘플이 필요하면 여기에 추가
     // JigItemData(
     //   image: 'jig_example1.jpg',
     //   title: 'LX3 진동&배광 지그 1대분',
@@ -61,9 +62,13 @@ class _MainPageState extends State<MainPage> {
         );
 
       case MainTab.mine:
+      // ✅ MyJigsPage에 liked + jigsNotifier 둘 다 전달
         return ValueListenableBuilder<List<JigItemData>>(
           valueListenable: _likedItems,
-          builder: (_, liked, __) => MyJigsPage(likedItems: liked),
+          builder: (_, liked, __) => MyJigsPage(
+            likedItems: liked,
+            jigsNotifier: _jigsNotifier,
+          ),
         );
     }
   }

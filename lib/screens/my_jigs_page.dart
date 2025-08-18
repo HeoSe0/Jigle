@@ -1,4 +1,6 @@
+// lib/screens/my_jigs_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // ✅ ValueListenable 사용
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
@@ -11,8 +13,14 @@ import '../widgets/jig_item_data.dart';
 import '../widgets/jig_item.dart';
 
 class MyJigsPage extends StatelessWidget {
+  const MyJigsPage({
+    super.key,
+    required this.likedItems,
+    required this.jigsNotifier, // ✅ 전체 지그 목록
+  });
+
   final List<JigItemData> likedItems;
-  const MyJigsPage({super.key, required this.likedItems});
+  final ValueListenable<List<JigItemData>> jigsNotifier;
 
   @override
   Widget build(BuildContext context) {
@@ -26,12 +34,14 @@ class MyJigsPage extends StatelessWidget {
             children: [
               const ProfileHeader(),
               const SizedBox(height: 8),
+              // 동적 위젯이라 const 제거
               MenuGrid(
-                items: const [
-                  _MenuSpec('나의 지그', MyJigScreen()),
-                  _MenuSpec('나의 샘플', MySampleScreen()),
-                  _MenuSpec('창고 현황', WarehouseScreen()),
-                  _MenuSpec('관리자 설정', AdminScreen()),
+                items: [
+                  const _MenuSpec('나의 지그', MyJigScreen()),
+                  const _MenuSpec('나의 샘플', MySampleScreen()),
+                  // ✅ WarehouseScreen에 전체 지그 전달
+                  _MenuSpec('창고 현황', WarehouseScreen(allItems: jigsNotifier.value)),
+                  const _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
               const SizedBox(height: 6),
@@ -74,15 +84,9 @@ class ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           const Expanded(
-            child: Text(
-              '프로필',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
+            child: Text('프로필', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
           ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: () {}, //
-          ),
+          IconButton(icon: const Icon(Icons.chevron_right), onPressed: () {}),
         ],
       ),
     );
@@ -90,8 +94,8 @@ class ProfileHeader extends StatelessWidget {
 }
 
 class MenuGrid extends StatelessWidget {
-  final List<_MenuSpec> items;
   const MenuGrid({super.key, required this.items});
+  final List<_MenuSpec> items;
 
   @override
   Widget build(BuildContext context) {
@@ -114,9 +118,9 @@ class MenuGrid extends StatelessWidget {
 }
 
 class _MenuButton extends StatelessWidget {
+  const _MenuButton({required this.label, required this.target});
   final String label;
   final Widget target;
-  const _MenuButton({required this.label, required this.target});
 
   @override
   Widget build(BuildContext context) {
@@ -128,16 +132,16 @@ class _MenuButton extends StatelessWidget {
 }
 
 class QuickActions extends StatelessWidget {
-  final VoidCallback onTapLiked;
-  final VoidCallback onTapRecent;
-  final VoidCallback onTapEvent;
-
   const QuickActions({
     super.key,
     required this.onTapLiked,
     required this.onTapRecent,
     required this.onTapEvent,
   });
+
+  final VoidCallback onTapLiked;
+  final VoidCallback onTapRecent;
+  final VoidCallback onTapEvent;
 
   @override
   Widget build(BuildContext context) {
@@ -155,10 +159,10 @@ class QuickActions extends StatelessWidget {
 }
 
 class _IconBox extends StatelessWidget {
+  const _IconBox({required this.icon, required this.label, required this.onTap});
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _IconBox({required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -182,9 +186,9 @@ class _IconBox extends StatelessWidget {
 }
 
 class _CardButton extends StatelessWidget {
+  const _CardButton({required this.child, required this.onTap});
   final Widget child;
   final VoidCallback onTap;
-  const _CardButton({required this.child, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -215,8 +219,8 @@ class _CardButton extends StatelessWidget {
 /* -------------------------- liked list screen -------------------------- */
 
 class LikedJigsScreen extends StatelessWidget {
-  final List<JigItemData> likedItems;
   const LikedJigsScreen({super.key, required this.likedItems});
+  final List<JigItemData> likedItems;
 
   @override
   Widget build(BuildContext context) {
@@ -281,7 +285,7 @@ class _EmptyLikedState extends StatelessWidget {
 /* -------------------------- utils -------------------------- */
 
 class _MenuSpec {
+  const _MenuSpec(this.label, this.screen);
   final String label;
   final Widget screen;
-  const _MenuSpec(this.label, this.screen);
 }

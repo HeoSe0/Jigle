@@ -51,3 +51,6 @@ flutter:
     - family: Pretendard-M
       fonts:
         - asset: fonts/Pretendard-Medium.otf
+linter:
+  rules:
+    unused_local_variable: ignore
