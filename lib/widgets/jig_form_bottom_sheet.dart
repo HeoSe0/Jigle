@@ -28,7 +28,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   static const List<String> _floors = ['1층', '2층', '3층', '4층'];
   static const Set<String> _bdongSlotsNeedFloor = {'L1', 'C1', 'R1'};
 
-  static const int _baekMax = 24; // 배광시험동 슬롯 수
+  // 배광시험동: R은 1~24, L은 1~20
+  static const int _baekMaxR = 24;
+  static const int _baekMaxL = 20;
   static const List<String> _baekFloors = ['1층', '2층', '3층', '4층', '5층'];
 
   static const int _maxImages = 5;
@@ -41,19 +43,31 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   static double get _baekListHeight =>
       (_BAEK_SLOT_HEIGHT + _ROW_V_PADDING * 2) * _VISIBLE_ROWS;
 
+  // 지그 사이즈 라벨(내부 값은 기존 상수 유지)
+  static const Map<String, String> _sizeLabels = {
+    JigItemData.sizeSmall: '소형 (15 ~ 20cm 미만)',
+    JigItemData.sizeMedium: '중형 (20 ~ 50cm 미만)',
+    JigItemData.sizeLarge: '대형 (50cm 이상)',
+  };
+
+  // 지그 높이 옵션
+  static const List<String> _jigHeightOptions = [
+    '30cm 미만',
+    '50cm 미만',
+    '50cm 이상',
+  ];
+
   // ---- 컨트롤러 & 상태 ----
   late TextEditingController titleController;
   late TextEditingController descriptionController;
   late TextEditingController registrantController;
 
-  // 제목 필수 표시용
   final FocusNode _titleFocus = FocusNode();
   bool _titleError = false;
 
   String location = '진량공장 B동';
   String jigSize = JigItemData.sizeSmall;
-
-  String jigHeight = '30cm 미만';
+  String? jigHeight; // 신규 항목(필요 시 모델에 저장 로직 추가)
 
   String? bDongSlot;
   String? bDongFloor;
@@ -97,7 +111,16 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           baekSlot = null;
           baekFloor = null;
         } else if (location == '배광시험동 2층') {
-          if (slot != null) baekSlot = slot;
+          if (slot != null) {
+            final s = slot.trim();
+            if (s.startsWith('L')) {
+              final n = int.tryParse(s.substring(1));
+              if (n != null && n >= 1 && n <= _baekMaxL) baekSlot = s;
+            } else if (s.startsWith('R')) {
+              final n = int.tryParse(s.substring(1));
+              if (n != null && n >= 1 && n <= _baekMaxR) baekSlot = s;
+            }
+          }
           if (floor != null && _baekFloors.contains(floor)) baekFloor = floor;
           bDongSlot = null;
           bDongFloor = null;
@@ -217,6 +240,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     setState(() {
       if (isStart) {
         startDate = DateTime(picked.year, picked.month, picked.day);
+        if (endDate != null && endDate!.isBefore(startDate!)) {
+          endDate = startDate; // 간단 보정
+        }
       } else {
         endDate = DateTime(picked.year, picked.month, picked.day);
       }
@@ -231,7 +257,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return '$y-$m-$day';
   }
 
-  // ---- 배광시험동 선택 요약 ----
+  // ---- 배광 요약/초기화 ----
   void _clearBaekSelection() {
     setState(() {
       baekSlot = null;
@@ -274,31 +300,36 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     );
   }
 
+  // ---- 로케이션 문자열 안전 구성 ----
+  String _buildLocationString() {
+    final parts = <String>[];
+    parts.add(location);
+
+    if (location == '진량공장 B동') {
+      if ((bDongSlot ?? '').isNotEmpty) parts.add(bDongSlot!);
+      if ((bDongSlot ?? '').isNotEmpty &&
+          _bdongSlotsNeedFloor.contains(bDongSlot!) &&
+          (bDongFloor ?? '').isNotEmpty) {
+        parts.add(bDongFloor!);
+      }
+    } else if (location == '배광시험동 2층') {
+      if ((baekSlot ?? '').isNotEmpty) parts.add(baekSlot!);
+      if ((baekFloor ?? '').isNotEmpty) parts.add(baekFloor!);
+    }
+    return parts.where((e) => e.trim().isNotEmpty).join(' / ');
+  }
+
   // ---- 제출 ----
   void _submit() {
     final trimmedTitle = titleController.text.trim();
+
     if (trimmedTitle.isEmpty) {
       setState(() => _titleError = true);
       _titleFocus.requestFocus();
       return;
     }
 
-    String finalLocation = location;
-    if (location == '진량공장 B동') {
-      if (bDongSlot != null && bDongSlot!.isNotEmpty) {
-        finalLocation = '$finalLocation / $bDongSlot';
-        if (_bdongSlotsNeedFloor.contains(bDongSlot!) && bDongFloor != null && bDongFloor!.isNotEmpty) {
-          finalLocation = '$finalLocation / $bDongFloor';
-        }
-      }
-    } else if (location == '배광시험동 2층') {
-      if (baekSlot != null && baekSlot!.isNotEmpty) {
-        finalLocation = '$finalLocation / $baekSlot';
-        if (baekFloor != null && baekFloor!.isNotEmpty) {
-          finalLocation = '$finalLocation / $baekFloor';
-        }
-      }
-    }
+    final String finalLocation = _buildLocationString();
 
     final String finalThumb = _images.isNotEmpty
         ? _images[_thumbIndex]
@@ -313,6 +344,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
+      // TODO: jigHeight를 모델에 저장하려면 JigItemData에 필드를 추가하세요.
     );
 
     widget.onSubmit(newJig);
@@ -505,7 +537,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
                 const SizedBox(height: 10),
 
-                // 제목 (필수, 에러 하이라이트)
+                // 기본 필드들
                 TextField(
                   controller: titleController,
                   focusNode: _titleFocus,
@@ -513,7 +545,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     labelText: '제목',
                     errorText: _titleError ? '제목은 필수입니다.' : null,
                     filled: _titleError,
-                    fillColor: Colors.red.withOpacity(0.06), // 줄 배경 하이라이트
+                    fillColor: Colors.red.withOpacity(0.06),
                     border: const OutlineInputBorder(),
                     enabledBorder: const OutlineInputBorder(),
                     focusedBorder: OutlineInputBorder(
@@ -531,12 +563,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   ),
                   onChanged: (v) {
                     if (_titleError && v.trim().isNotEmpty) {
-                      setState(() => _titleError = false); // 입력 시작하면 에러 해제
+                      setState(() => _titleError = false);
                     }
                   },
                   maxLines: 1,
                 ),
-
                 const SizedBox(height: 10),
                 TextField(
                   controller: descriptionController,
@@ -555,23 +586,15 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: [
-                    _chip44(
-                      label: '소형 (15 ~ 20cm 미만)',
-                      selected: jigSize == JigItemData.sizeSmall,
-                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeSmall),
-                    ),
-                    _chip44(
-                      label: '중형 (20 ~ 50cm 미만)',
-                      selected: jigSize == JigItemData.sizeMedium,
-                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeMedium),
-                    ),
-                    _chip44(
-                      label: '대형 (50cm 이상)',
-                      selected: jigSize == JigItemData.sizeLarge,
-                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeLarge),
-                    ),
-                  ],
+                  children: [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge].map((s) {
+                    final isSelected = jigSize == s;
+                    final label = _sizeLabels[s] ?? s;
+                    return _chip44(
+                      label: label,
+                      selected: isSelected,
+                      onSelected: (_) => setState(() => jigSize = s),
+                    );
+                  }).toList(),
                 ),
 
                 const SizedBox(height: 16),
@@ -579,23 +602,14 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: [
-                    _chip44(
-                      label: '30cm 미만',
-                      selected: jigHeight == '30cm 미만',
-                      onSelected: (_) => setState(() => jigHeight = '30cm 미만'),
-                    ),
-                    _chip44(
-                      label: '50cm 미만',
-                      selected: jigHeight == '50cm 미만',
-                      onSelected: (_) => setState(() => jigHeight = '50cm 미만'),
-                    ),
-                    _chip44(
-                      label: '50cm 이상',
-                      selected: jigHeight == '50cm 이상',
-                      onSelected: (_) => setState(() => jigHeight = '50cm 이상'),
-                    ),
-                  ],
+                  children: _jigHeightOptions.map((h) {
+                    final isSelected = jigHeight == h;
+                    return _chip44(
+                      label: h,
+                      selected: isSelected,
+                      onSelected: (_) => setState(() => jigHeight = h),
+                    );
+                  }).toList(),
                 ),
 
                 const SizedBox(height: 16),
@@ -679,44 +693,57 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   const Text("지그 위치 (스크롤)", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
 
-                  // 선택 요약 위젯
+                  // 선택 요약
                   _baekSummaryWidget(),
                   const SizedBox(height: 6),
 
                   SizedBox(
                     height: _baekListHeight,
                     child: ListView.builder(
-                      itemCount: _baekMax,
+                      itemCount: _baekMaxR, // R 최대 길이에 맞춤
                       itemBuilder: (context, index) {
-                        final r = 'R${index + 1}';
-                        final l = 'L${index + 1}';
+                        final n = index + 1;
+                        final r = 'R$n';
+                        final l = 'L$n';
+                        final showR = n <= _baekMaxR;
+                        final showL = n <= _baekMaxL;
+
                         final isRSelected = baekSlot == r;
                         final isLSelected = baekSlot == l;
+
                         return Padding(
                           padding: EdgeInsets.symmetric(vertical: _ROW_V_PADDING),
                           child: Row(
                             children: [
-                              Expanded(
-                                child: _slotButton(
-                                  label: r,
-                                  selected: isRSelected,
-                                  onTap: () => setState(() {
-                                    baekSlot = r;
-                                    baekFloor = null;
-                                  }),
-                                ),
-                              ),
+                              if (showR)
+                                Expanded(
+                                  child: _slotButton(
+                                    label: r,
+                                    selected: isRSelected,
+                                    onTap: () => setState(() {
+                                      baekSlot = r;
+                                      baekFloor = null;
+                                    }),
+                                  ),
+                                )
+                              else
+                                const Expanded(child: SizedBox.shrink()),
+
                               const SizedBox(width: 10),
-                              Expanded(
-                                child: _slotButton(
-                                  label: l,
-                                  selected: isLSelected,
-                                  onTap: () => setState(() {
-                                    baekSlot = l;
-                                    baekFloor = null;
-                                  }),
-                                ),
-                              ),
+
+                              if (showL)
+                                Expanded(
+                                  child: _slotButton(
+                                    label: l,
+                                    selected: isLSelected,
+                                    onTap: () => setState(() {
+                                      baekSlot = l;
+                                      baekFloor = null;
+                                    }),
+                                  ),
+                                )
+                              else
+                                const Expanded(child: SizedBox.shrink()),
                             ],
                           ),
                         );
