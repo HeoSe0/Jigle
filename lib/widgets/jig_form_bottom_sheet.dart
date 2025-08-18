@@ -46,6 +46,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   late TextEditingController descriptionController;
   late TextEditingController registrantController;
 
+  // 제목 필수 표시용
+  final FocusNode _titleFocus = FocusNode();
+  bool _titleError = false;
+
   String location = '진량공장 B동';
   String jigSize = JigItemData.sizeSmall;
 
@@ -120,6 +124,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     titleController.dispose();
     descriptionController.dispose();
     registrantController.dispose();
+    _titleFocus.dispose();
     super.dispose();
   }
 
@@ -224,14 +229,58 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return '$y-$m-$day';
   }
 
+  // ---- 배광시험동 선택 요약 ----
+  void _clearBaekSelection() {
+    setState(() {
+      baekSlot = null;
+      baekFloor = null;
+    });
+  }
+
+  Widget _baekSummaryWidget() {
+    final hasSelection = (baekSlot != null) || (baekFloor != null);
+    final summary = (baekSlot == null)
+        ? '선택 없음 · 지그 위치를 먼저 선택하세요'
+        : '선택: $baekSlot${baekFloor != null ? ' · $baekFloor' : ' · 층 미선택'}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.blue.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              summary,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (hasSelection)
+            TextButton.icon(
+              onPressed: _clearBaekSelection,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('초기화'),
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+            ),
+        ],
+      ),
+    );
+  }
+
   // ---- 제출 ----
   void _submit() {
-    if (titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('제목을 입력해주세요.')),
-      );
+    final trimmedTitle = titleController.text.trim();
+    if (trimmedTitle.isEmpty) {
+      setState(() => _titleError = true);
+      _titleFocus.requestFocus();
       return;
     }
+
     String finalLocation = location;
     if (location == '진량공장 B동') {
       if (bDongSlot != null && bDongSlot!.isNotEmpty) {
@@ -255,10 +304,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
     final newJig = JigItemData(
       image: finalThumb,
-      title: titleController.text,
+      title: trimmedTitle,
       location: finalLocation,
-      description: descriptionController.text,
-      registrant: registrantController.text,
+      description: descriptionController.text.trim(),
+      registrant: registrantController.text.trim(),
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
@@ -454,12 +503,38 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
                 const SizedBox(height: 10),
 
-                // 기본 필드들
+                // 제목 (필수, 에러 하이라이트)
                 TextField(
                   controller: titleController,
-                  decoration: const InputDecoration(labelText: '제목'),
+                  focusNode: _titleFocus,
+                  decoration: InputDecoration(
+                    labelText: '제목',
+                    errorText: _titleError ? '제목은 필수입니다.' : null,
+                    filled: _titleError,
+                    fillColor: Colors.red.withOpacity(0.06), // 줄 배경 하이라이트
+                    border: const OutlineInputBorder(),
+                    enabledBorder: const OutlineInputBorder(),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(
+                        color: _titleError ? Colors.red : Colors.blue,
+                        width: _titleError ? 2 : 1.5,
+                      ),
+                    ),
+                    errorBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: const OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.red, width: 2),
+                    ),
+                  ),
+                  onChanged: (v) {
+                    if (_titleError && v.trim().isNotEmpty) {
+                      setState(() => _titleError = false); // 입력 시작하면 에러 해제
+                    }
+                  },
                   maxLines: 1,
                 ),
+
                 const SizedBox(height: 10),
                 TextField(
                   controller: descriptionController,
@@ -568,6 +643,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   const SizedBox(height: 12),
                   const Text("지그 위치 (스크롤)", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
+
+                  // 선택 요약 위젯
+                  _baekSummaryWidget(),
+                  const SizedBox(height: 6),
+
                   SizedBox(
                     height: _baekListHeight,
                     child: ListView.builder(
