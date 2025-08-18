@@ -1,6 +1,6 @@
 // lib/screens/my_jigs_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ✅ ValueListenable 사용
+import 'package:flutter/foundation.dart'; // ✅ ValueListenable
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
@@ -11,6 +11,7 @@ import '../my_jig_page/event_screen.dart';
 
 import '../widgets/jig_item_data.dart';
 import '../widgets/jig_item.dart';
+import '../widgets/jig_form_bottom_sheet.dart'; // ✅ 수정 폼 추가
 
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({
@@ -46,7 +47,11 @@ class MyJigsPage extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               QuickActions(
-                onTapLiked: () => _push(context, LikedJigsScreen(likedItems: likedItems)),
+                // ✅ 관심목록 화면에 jigsNotifier도 넘겨서 저장 시 전체 목록 동기화
+                onTapLiked: () => _push(context, LikedJigsScreen(
+                  likedItems: likedItems,
+                  jigsNotifier: jigsNotifier,
+                )),
                 onTapRecent: () => _push(context, const RecentScreen()),
                 onTapEvent: () => _push(context, const EventScreen()),
               ),
@@ -216,16 +221,74 @@ class _CardButton extends StatelessWidget {
   }
 }
 
-/* -------------------------- liked list screen -------------------------- */
+/* -------------------------- liked list screen (수정 가능) -------------------------- */
 
-class LikedJigsScreen extends StatelessWidget {
-  const LikedJigsScreen({super.key, required this.likedItems});
+class LikedJigsScreen extends StatefulWidget {
+  const LikedJigsScreen({
+    super.key,
+    required this.likedItems,
+    required this.jigsNotifier, // ✅ 전체 목록 동기화용
+  });
+
   final List<JigItemData> likedItems;
+  final ValueListenable<List<JigItemData>> jigsNotifier;
+
+  @override
+  State<LikedJigsScreen> createState() => _LikedJigsScreenState();
+}
+
+class _LikedJigsScreenState extends State<LikedJigsScreen> {
+  // 이 화면에서 즉시 반영되도록 로컬 상태로 관리
+  late final ValueNotifier<List<JigItemData>> _likedVN =
+  ValueNotifier<List<JigItemData>>(List<JigItemData>.from(widget.likedItems));
+
+  JigItemData _withPreservedLike({required JigItemData edited, required JigItemData old}) =>
+      edited.copyWith(likes: old.likes, isLiked: old.isLiked);
+
+  void _openEdit(BuildContext context, JigItemData item, int index) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => JigFormBottomSheet(
+        editItem: item,
+        onSubmit: (newJig) {
+          final updated = _withPreservedLike(edited: newJig, old: item);
+
+          // 1) 관심목록(로컬) 갱신
+          final list = List<JigItemData>.from(_likedVN.value);
+          list[index] = updated;
+          _likedVN.value = list;
+
+          // 2) 전체 목록 동기화 (가능한 경우)
+          final ln = widget.jigsNotifier;
+          if (ln is ValueNotifier<List<JigItemData>>) {
+            final all = List<JigItemData>.from(ln.value);
+            // 우선 참조 동일성으로 찾고, 없으면 타이틀/위치로 매칭
+            int gi = all.indexOf(item);
+            if (gi == -1) {
+              gi = all.indexWhere((e) =>
+              e.title == item.title &&
+                  e.location == item.location &&
+                  e.registrant == item.registrant);
+            }
+            if (gi != -1) {
+              all[gi] = _withPreservedLike(edited: newJig, old: all[gi]);
+              ln.value = all;
+            }
+          }
+
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final isEmpty = likedItems.isEmpty;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -234,24 +297,43 @@ class LikedJigsScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text('관심 지그', style: TextStyle(color: Colors.black)),
       ),
-      body: isEmpty
-          ? const _EmptyLikedState()
-          : ListView.separated(
-        padding: const EdgeInsets.all(10),
-        itemCount: likedItems.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (_, index) {
-          final item = likedItems[index];
-          return JigItem(
-            image: item.image,
-            title: item.title,
-            location: item.location,
-            price: item.description,
-            registrant: item.registrant,
-            likes: item.likes,
-            isLiked: item.isLiked,
-            storageDate: item.storageDate,
-            disposalDate: item.disposalDate,
+      body: ValueListenableBuilder<List<JigItemData>>(
+        valueListenable: _likedVN,
+        builder: (_, likedItems, __) {
+          if (likedItems.isEmpty) {
+            return const _EmptyLikedState();
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(10),
+            itemCount: likedItems.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemBuilder: (_, index) {
+              final item = likedItems[index];
+              return Stack(
+                children: [
+                  JigItem(
+                    image: item.image,
+                    title: item.title,
+                    location: item.location,
+                    price: item.description,
+                    registrant: item.registrant,
+                    likes: item.likes,
+                    isLiked: item.isLiked,
+                    storageDate: item.storageDate,
+                    disposalDate: item.disposalDate,
+                  ),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: IconButton(
+                      tooltip: '수정',
+                      icon: const Icon(Icons.edit, color: Colors.black),
+                      onPressed: () => _openEdit(context, item, index),
+                    ),
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
