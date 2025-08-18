@@ -1,7 +1,9 @@
 // lib/map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../../widgets/jig_item_data.dart';
 import '../../widgets/jig_item.dart';
+import '../../widgets/jig_form_bottom_sheet.dart';
 
 /// B동과 동일한 포화도 색상(알파 조절 가능)
 Color _colorForUtil({
@@ -23,7 +25,15 @@ Color _colorForUtil({
 /// 배광시험동 2층 – R1~R24 / L1~L20 (각 슬롯 1~5층)
 class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   final VoidCallback onBack;
+
+  /// 실시간 리스트(선택). 없으면 [allItems] 스냅샷 사용
+  final ValueListenable<List<JigItemData>>? jigsListenable;
+
+  /// 최초 진입 스냅샷(선택)
   final List<JigItemData> allItems;
+
+  /// 등록 시 상위로 전달(선택) – 부모에서 전역 리스트 갱신
+  final void Function(JigItemData newItem)? onCreateJig;
 
   /// 층 버튼 색상 상한 (가중치 합계가 이 값에 가까울수록 빨강)
   final int maxCapacityPerFloor;
@@ -42,7 +52,9 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   const JinryangBaekwangTestBuildingMap({
     super.key,
     required this.onBack,
+    this.jigsListenable,
     this.allItems = const [],
+    this.onCreateJig,
     this.maxCapacityPerFloor = 20,
     this.weightOfItem,
     this.floorBtnWidthFrac = 0.86,
@@ -67,10 +79,56 @@ class _JinryangBaekwangTestBuildingMapState
   static const double _kColGap = 70;
   static double get _rowWidth => _kBtnW * 2 + _kColGap;
 
-  // ===== Util =====
+  // ===== 최근 본 위치(FAB 프리필) =====
+  String? _lastSlot;   // Ln / Rn
+  String? _lastFloor;  // 1층~5층
+
+  // ===== 내부 로컬 리스트 (전역 연결 없을 때 사용) =====
+  late List<JigItemData> _localItems;
+
+  // ===== 최신 아이템 접근 =====
+  List<JigItemData> get _items =>
+      widget.jigsListenable?.value ?? _localItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _localItems = List<JigItemData>.from(widget.allItems);
+    widget.jigsListenable?.addListener(_onItemsChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant JinryangBaekwangTestBuildingMap oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.jigsListenable != widget.jigsListenable) {
+      oldWidget.jigsListenable?.removeListener(_onItemsChanged);
+      widget.jigsListenable?.addListener(_onItemsChanged);
+    }
+    // allItems prop이 바뀌면 로컬 스냅샷 갱신
+    if (!listEquals(oldWidget.allItems, widget.allItems) &&
+        widget.jigsListenable == null) {
+      _localItems = List<JigItemData>.from(widget.allItems);
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.jigsListenable?.removeListener(_onItemsChanged);
+    super.dispose();
+  }
+
+  void _onItemsChanged() {
+    if (mounted) setState(() {}); // 포화도 재계산
+  }
+
+  // ===== 문자열 정규화/파싱 =====
+  String _norm(String s) => s.replaceAll(RegExp(r'\s+'), '').trim();
+  List<String> _parts(String loc) => loc.split('/').map((e) => e.trim()).toList();
+
   int _weight(JigItemData it) {
     if (widget.weightOfItem != null) return widget.weightOfItem!(it);
-    switch (it.size.replaceAll(' ', '')) {
+    switch ((it.size ?? '').replaceAll(' ', '')) {
       case '대형':
       case '대':
         return 5;
@@ -82,15 +140,15 @@ class _JinryangBaekwangTestBuildingMapState
     }
   }
 
-  String _parent(String loc) => loc.split('/').first.trim();
+  String _parent(String loc) => _parts(loc).first.trim();
 
   String? _slot(String loc) {
-    final p = loc.split('/').map((e) => e.trim()).toList();
+    final p = _parts(loc);
     return p.length > 1 ? p[1] : null; // Rn/Ln
   }
 
   String? _floor(String loc) {
-    final p = loc.split('/').map((e) => e.trim()).toList();
+    final p = _parts(loc);
     if (p.length > 2) {
       final m = RegExp(r'(\d)').firstMatch(p[2]);
       if (m != null) return '${m.group(1)}층';
@@ -98,10 +156,17 @@ class _JinryangBaekwangTestBuildingMapState
     return null;
   }
 
+  bool _isBaek2F(String loc) => _norm(_parent(loc)) == _norm('배광시험동 2층');
+
   List<JigItemData> _itemsFor(String slot, String floor) {
-    return widget.allItems.where((it) {
-      if (_parent(it.location) != '배광시험동 2층') return false;
-      return _slot(it.location) == slot && _floor(it.location) == floor;
+    final ns = _norm(slot);
+    final nf = _norm(floor);
+    return _items.where((it) {
+      final loc = it.location;
+      if (!_isBaek2F(loc)) return false;
+      final s = _slot(loc);
+      final f = _floor(loc);
+      return _norm(s ?? '') == ns && _norm(f ?? '') == nf;
     }).toList();
   }
 
@@ -121,11 +186,70 @@ class _JinryangBaekwangTestBuildingMapState
   }
 
   /// ▶ 슬롯 버튼 색상 (B동과 동일 기준)
-  ///  - 슬롯은 배경 위에서 확실히 보이도록 alpha를 크게
   Color _slotColor(String slot) {
     final used = _usedTotalForSlot(slot);
     final max = widget.maxCapacityPerFloor * 5; // 5층 합계 기준
     return _colorForUtil(used: used, max: max, alpha: 0.8);
+  }
+
+  // ===== 등록 처리: 전역 반영 보장 + 로컬 폴백 =====
+  void _handleCreateJig(JigItemData newJig) {
+    bool handled = false;
+
+    // 1) 부모 콜백이 있으면 사용 (전역 연동)
+    if (widget.onCreateJig != null) {
+      widget.onCreateJig!(newJig);
+      handled = true;
+    }
+
+    // 2) jigsListenable가 ValueNotifier면 내부에서 바로 append (전역 연동)
+    final ln = widget.jigsListenable;
+    if (!handled && ln is ValueNotifier<List<JigItemData>>) {
+      final cur = List<JigItemData>.from(ln.value);
+      ln.value = [...cur, newJig];
+      handled = true;
+    }
+
+    // 3) 둘 다 없으면 로컬 리스트에 추가 (화면 즉시 반영)
+    if (!handled) {
+      setState(() {
+        _localItems = [..._localItems, newJig];
+      });
+    }
+
+    // 최근 위치(FAB 프리필)
+    _lastSlot = _slot(newJig.location) ?? _lastSlot;
+    _lastFloor = _floor(newJig.location) ?? _lastFloor;
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(handled
+              ? '지그가 등록되었습니다.'
+              : '지그가 등록되어 이 화면에는 반영되었습니다. (전역 연동은 onCreateJig 또는 ValueNotifier 연결 권장)'),
+        ),
+      );
+    }
+  }
+
+  // ===== 등록 폼 열기 (B동과 동일 패턴) =====
+  void _openAddJig({String? slot, String? floor}) {
+    String loc = '배광시험동 2층';
+    if (slot != null && slot.isNotEmpty) loc += ' / $slot';
+    if (floor != null && floor.isNotEmpty) loc += ' / $floor';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => JigFormBottomSheet(
+        initialLocation: loc, // 프리필만 전달
+        onSubmit: (newJig) => _handleCreateJig(newJig),
+      ),
+    );
   }
 
   // ===== UI: 버튼들 =====
@@ -151,7 +275,10 @@ class _JinryangBaekwangTestBuildingMapState
                 elevation: 0,
                 shadowColor: Colors.transparent,
               ),
-              onPressed: () => _openSlotDialog(context, label),
+              onPressed: () {
+                _lastSlot = label;   // 최근 슬롯 기억(FAB 프리필)
+                _openSlotDialog(context, label);
+              },
               child: Text(label),
             ),
           ),
@@ -267,7 +394,11 @@ class _JinryangBaekwangTestBuildingMapState
                   slotLabel: slot,
                   maxCapacity: widget.maxCapacityPerFloor,
                   selectedFloor: selectedFloor,
-                  onSelectFloor: (floor) => setSB(() => selectedFloor = floor),
+                  onSelectFloor: (floor) {
+                    setSB(() => selectedFloor = floor);
+                    _lastSlot = slot;
+                    _lastFloor = floor; // 최근 층도 기억
+                  },
                   onBackToFloors: () => setSB(() => selectedFloor = null),
                   capacityForFloor: (floorLabel) => _usedFor(slot, floorLabel),
                   detailsBuilder: (slotLabel, floorLabel, onBack) {
@@ -294,7 +425,6 @@ class _JinryangBaekwangTestBuildingMapState
                             onLikePressed: () {},
                             storageDate: it.storageDate,
                             disposalDate: it.disposalDate,
-                            // 배지용(프로젝트에 맞게 필드가 있다면 표시)
                             size: it.size,
                             jigHeight: it.jigHeight,
                           );
@@ -313,8 +443,19 @@ class _JinryangBaekwangTestBuildingMapState
                 ),
               ),
               actions: [
+                // ➕ 지그 등록 버튼(선택한 층 프리필)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pop(dctx); // 다이얼로그 닫고
+                      _openAddJig(slot: slot, floor: selectedFloor);
+                    },
+                    child: const Text('+ 지그 등록'),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
                   child: TextButton(
                     onPressed: () => Navigator.pop(dctx),
                     child: const Text('돌아가기'),
@@ -397,6 +538,12 @@ class _JinryangBaekwangTestBuildingMapState
             ),
           ],
         ),
+      ),
+
+      // ▶ B동과 동일: 최근 위치 프리필로 바로 등록
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _openAddJig(slot: _lastSlot, floor: _lastFloor),
+        label: const Text('+ 지그 등록'),
       ),
     );
   }
