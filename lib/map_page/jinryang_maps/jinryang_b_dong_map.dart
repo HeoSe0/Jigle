@@ -18,6 +18,16 @@ Color colorForUtil({required int used, required int max}) {
   return base.withOpacity(a);
 }
 
+// [신규] 선반 버튼용 구간형 색상 함수: <30% 초록 / 30~90% 노랑 / ≥90% 빨강
+Color colorForUtilBand({required int used, required int maxTotal}) {
+  final _max = (maxTotal <= 0) ? 1 : maxTotal;
+  final u = used.clamp(0, _max) / _max;
+  const a = 0.35;
+  if (u < 0.30) return Colors.green.withOpacity(a);
+  if (u < 0.90) return Colors.yellow.withOpacity(a);
+  return Colors.red.withOpacity(a);
+}
+
 class JinryangBDongMap extends StatefulWidget {
   final VoidCallback onBack;
 
@@ -221,7 +231,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
         oldWidget.maxCapacityF != widget.maxCapacityF ||
         oldWidget.maxCapacityShelves != widget.maxCapacityShelves ||
         oldWidget.weightOfItem != widget.weightOfItem) {
-      setState(() {});
+      setState(() {}); // 포화도 재계산 필요
     }
   }
 
@@ -309,11 +319,21 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               ),
             ),
 
-            // 선반 버튼
+            // 선반 버튼 (선반별 4층 합산 포화도 색상 적용)
             ...shelves.map((s) {
               final base = rectFromFrac(s.left, s.top, s.width, s.height);
               final rect = applyScale(base, s.label, isShelf: true);
-              return _ShelfButton(spec: s, rect: rect, onTap: () => _onShelfTap(s));
+
+              final usedShelf = _usedWeightForShelf(s.label);
+              final maxTotal = widget.maxCapacityShelves * 4; // 4층 합산 상한
+              final shelfColor = colorForUtilBand(used: usedShelf, maxTotal: maxTotal);
+
+              return _ShelfButton(
+                spec: s,
+                rect: rect,
+                onTap: () => _onShelfTap(s),
+                backgroundColor: shelfColor,
+              );
             }),
 
             // F 버튼 (최신 리스트 + size 가중치 합계로 색상)
@@ -409,6 +429,13 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
 
   int _usedWeightForFZone(String fzone) =>
       _itemsForFZone(fzone).fold(0, (sum, it) => sum + _weightOf(it));
+
+  // [신규] 선반(L1/R1/C1)의 1~4층 가중치 합
+  int _usedWeightForShelf(String shelf) =>
+      _usedWeightForShelfFloor(shelf, '1층') +
+          _usedWeightForShelfFloor(shelf, '2층') +
+          _usedWeightForShelfFloor(shelf, '3층') +
+          _usedWeightForShelfFloor(shelf, '4층');
 
   // -------- 액션/다이얼로그 & 폼 --------
   String? _shelfImage(String shelf) {
@@ -649,7 +676,14 @@ class _ShelfButton extends StatelessWidget {
   final _ShelfSpec spec;
   final Rect rect;
   final VoidCallback onTap;
-  const _ShelfButton({required this.spec, required this.rect, required this.onTap});
+  final Color backgroundColor; // [신규]
+
+  const _ShelfButton({
+    required this.spec,
+    required this.rect,
+    required this.onTap,
+    this.backgroundColor = Colors.transparent, // 기본값 유지
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -658,7 +692,8 @@ class _ShelfButton extends StatelessWidget {
       child: TextButton(
         onPressed: onTap,
         style: TextButton.styleFrom(
-          backgroundColor: Colors.transparent, padding: EdgeInsets.zero,
+          backgroundColor: backgroundColor, // [신규] 선반 포화도 색상
+          padding: EdgeInsets.zero,
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         ),
         child: Align(

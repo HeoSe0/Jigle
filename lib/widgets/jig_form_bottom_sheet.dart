@@ -14,12 +14,16 @@ class JigFormBottomSheet extends StatefulWidget {
   // 현재 위치/선반/층에 따른 허용 높이 규칙(없으면 JigItemData.resolveHeightOptions 사용)
   final List<String> Function(String location, String? slot, String? floor)? heightPolicyResolver;
 
+  /// 지그 사이즈/높이 가이드 이미지(asset 경로)
+  final String sizeGuideAssetPath;
+
   const JigFormBottomSheet({
     super.key,
     this.editItem,
     required this.onSubmit,
     this.initialLocation,
     this.heightPolicyResolver,
+    this.sizeGuideAssetPath = 'assets/jig_size_guide_kr.png',
   });
 
   @override
@@ -286,7 +290,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return _allowedHeights().contains(jigHeight);
   }
 
-  // ---- 필수 항목 로직 ----
+  // ---- 필수 항목 로직(게터) ----
   bool get _needSlotSelection {
     // B동/배광시험동은 '지그 위치(슬롯)' 필수, 후생동 4층은 슬롯 개념 없음
     return location == '진량공장 B동' || location == '배광시험동 2층';
@@ -317,7 +321,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return true;
   }
 
-  // 오류 알약 UI
+  // ---- 오류 알약 UI ----
   Widget _errorPill(String msg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -331,11 +335,56 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         children: [
           const Icon(Icons.error_outline, size: 16, color: Color(0xFFB00020)),
           const SizedBox(width: 6),
-          Text(
-            msg,
-            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFFB00020)),
+          Flexible(
+            child: Text(
+              msg,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFB00020),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ---- 가이드 이미지 다이얼로그 ----
+  Future<void> _showSizeGuide() async {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
+        contentPadding: const EdgeInsets.all(8),
+        title: Row(
+          children: [
+            const Text(
+              '지그 사이즈/높이 가이드',
+              style: TextStyle(fontWeight: FontWeight.w300, fontSize: 16), // 텍스트 크기 줄임
+            ),
+            const Spacer(),
+            IconButton(
+              tooltip: '닫기',
+              onPressed: () => Navigator.pop(ctx),
+              icon: const Icon(Icons.close),
+            ),
+          ],
+        ),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
+          child: InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: Image.asset(
+              widget.sizeGuideAssetPath,
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.low,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -522,6 +571,15 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 // 상단 툴바 영역
                 Row(
                   children: [
+                    // ← 뒤로가기 버튼을 맨 왼쪽으로 이동
+                    IconButton(
+                      tooltip: '뒤로가기',
+                      onPressed: () => Navigator.maybePop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // 사진 추가 아이콘 & 버튼
                     const Icon(Icons.add_a_photo, color: Colors.black),
                     const SizedBox(width: 8),
                     ElevatedButton(
@@ -533,6 +591,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       child: const Text('사진 추가하기'),
                     ),
                     const SizedBox(width: 10),
+
+                    // 카메라 버튼
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green.shade100,
@@ -541,13 +601,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       onPressed: _pickFromCamera,
                       child: const Text('카메라로 촬영'),
                     ),
+
                     const Spacer(),
-                    IconButton(
-                      tooltip: '뒤로가기',
-                      onPressed: () => Navigator.maybePop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-                    ),
-                    const SizedBox(width: 12),
                     Text('${_images.length}/$_maxImages'),
                   ],
                 ),
@@ -698,32 +753,52 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   children: [
                     const Text("지그 높이", style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
-                    if (_heightError) _errorPill('지그 높이를 선택해주세요.')
+
+                    // 왼쪽 영역: 에러/경고 메시지(있으면 표시, 없으면 공간 채움)
+                    if (_heightError)
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: _errorPill('지그 높이를 선택해주세요.'),
+                        ),
+                      )
                     else if (!_isHeightSelectionAllowed)
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3CD),
-                            border: Border.all(color: const Color(0xFFEEA236)),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFF8A6D3B)),
-                              SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  '지그 높이 때문에 보관이 어려울 수 있습니다.',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF8A6D3B)),
-                                  overflow: TextOverflow.ellipsis,
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3CD),
+                              border: Border.all(color: const Color(0xFFEEA236)),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFF8A6D3B)),
+                                SizedBox(width: 6),
+                                Flexible(
+                                  child: Text(
+                                    '지그 높이 때문에 보관이 어려울 수 있습니다.',
+                                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF8A6D3B)),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+                      )
+                    else
+                      const Spacer(),
+
+                    // 오른쪽 도움말 아이콘
+                    IconButton(
+                      tooltip: '지그 사이즈/높이 가이드',
+                      onPressed: _showSizeGuide,
+                      icon: const Icon(Icons.help_outline),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),

@@ -46,7 +46,7 @@ flutter:
     - assets/shelf_C1.png
     - assets/sl_logo.png
     - assets/jigle_logo.png   # ← 로고 파일 등록
-
+    - assets/jig_size_guide_kr.png
   fonts:
     - family: Pretendard-M
       fonts:
