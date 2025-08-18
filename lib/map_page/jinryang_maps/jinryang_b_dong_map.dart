@@ -1,9 +1,9 @@
-// lib/map_page/jinryang_maps/jinryang_b_dong_map.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ValueListenable
+import 'package:flutter/foundation.dart';
 import '../../widgets/jig_item.dart';
 import '../../widgets/jig_item_data.dart';
 import '../../widgets/jig_form_bottom_sheet.dart';
+import '../../state/jigs_store.dart'; // ✅ 전역 저장소
 
 Color colorForUtil({required int used, required int max}) {
   final _max = (max <= 0) ? 1 : max;
@@ -18,7 +18,6 @@ Color colorForUtil({required int used, required int max}) {
   return base.withOpacity(a);
 }
 
-// 선반 버튼 색: <30% 초록 / 30~90% 노랑 / ≥90% 빨강
 Color colorForUtilBand({required int used, required int maxTotal}) {
   final _max = (maxTotal <= 0) ? 1 : maxTotal;
   final u = used.clamp(0, _max) / _max;
@@ -31,23 +30,20 @@ Color colorForUtilBand({required int used, required int maxTotal}) {
 class JinryangBDongMap extends StatefulWidget {
   final VoidCallback onBack;
 
-  /// 실시간 리스트(선택). 없으면 [allItems] 스냅샷 사용
+  /// (옵션) 외부 ValueListenable(전역 저장소를 이미 쓰는 경우 보통 전달 X)
   final ValueListenable<List<JigItemData>>? jigsListenable;
 
-  /// 최초 진입 스냅샷(선택)
+  /// 최초 스냅샷(옵션) – 전역 초기 세팅용
   final List<JigItemData> allItems;
 
-  // 레거시 capacity (입력은 받되 표시엔 미사용)
   final int l1Floor1Capacity, l1Floor2Capacity, l1Floor3Capacity, l1Floor4Capacity;
   final int r1Floor1Capacity, r1Floor2Capacity, r1Floor3Capacity, r1Floor4Capacity;
   final int c1Floor1Capacity, c1Floor2Capacity, c1Floor3Capacity, c1Floor4Capacity;
   final int f1Capacity, f2Capacity, f3Capacity, f4Capacity;
 
-  // 색상 상한
   final int maxCapacityShelves;
   final int maxCapacityF;
 
-  // 버튼 스케일
   final double shelfButtonWidthFactor;
   final double shelfButtonHeightFactor;
   final double fButtonWidthFactor;
@@ -57,7 +53,6 @@ class JinryangBDongMap extends StatefulWidget {
   final Map<String, double>? fButtonWidthOverrides;
   final Map<String, double>? fButtonHeightOverrides;
 
-  // 오버레이 파라미터
   final double overlayFloorBtnWidthFrac;
   final double overlayFloorBtnHeightFracOfQuarter;
   final double overlayFloorBtnCenterXFrac;
@@ -77,18 +72,15 @@ class JinryangBDongMap extends StatefulWidget {
   final Map<String, Map<String, double>>? overlayFloorBtnHeightOverrideFracByShelf;
   final Map<String, Map<String, Offset>>? overlayFloorBtnOffsetOverrideFracByShelf;
 
-  // 초기 포커스(선택)
   final String? initialShelf;
   final String? initialFloor;
   final String? initialFZone;
 
-  /// 소/중/대 → 1/3/5 매핑(선택)
   final int Function(JigItemData item)? weightOfItem;
 
-  /// 맵에서 지그 추가 시 상위 리스트 반영(선택)
+  /// (옵션) 외부로도 알리고 싶으면 사용. 전역 저장소는 내부에서 항상 반영됨.
   final void Function(JigItemData newItem)? onCreateJig;
 
-  /// 최초 진입 시 자동 팝업 열기 여부 (기본값 false)
   final bool autoOpenOnInit;
 
   const JinryangBDongMap({
@@ -96,16 +88,12 @@ class JinryangBDongMap extends StatefulWidget {
     required this.onBack,
     this.jigsListenable,
     this.allItems = const [],
-
-    // 레거시 입력(유지)
     this.l1Floor1Capacity = 0, this.l1Floor2Capacity = 0, this.l1Floor3Capacity = 0, this.l1Floor4Capacity = 0,
     this.r1Floor1Capacity = 0, this.r1Floor2Capacity = 0, this.r1Floor3Capacity = 0, this.r1Floor4Capacity = 0,
     this.c1Floor1Capacity = 0, this.c1Floor2Capacity = 0, this.c1Floor3Capacity = 0, this.c1Floor4Capacity = 0,
     this.f1Capacity = 0, this.f2Capacity = 0, this.f3Capacity = 0, this.f4Capacity = 0,
-
     this.maxCapacityShelves = 10,
     this.maxCapacityF = 10,
-
     this.shelfButtonWidthFactor = 1.2,
     this.shelfButtonHeightFactor = 0.9,
     this.fButtonWidthFactor = 0.9,
@@ -114,7 +102,6 @@ class JinryangBDongMap extends StatefulWidget {
     this.shelfButtonHeightOverrides,
     this.fButtonWidthOverrides,
     this.fButtonHeightOverrides,
-
     this.overlayFloorBtnWidthFrac = 0.78,
     this.overlayFloorBtnHeightFracOfQuarter = 0.4,
     this.overlayFloorBtnCenterXFrac = 0.5,
@@ -124,16 +111,12 @@ class JinryangBDongMap extends StatefulWidget {
     this.overlayFloorBtnHeightOverrideFrac,
     this.overlayFloorBtnOffsetOverrideFrac,
     this.overlayFloorBtnStackScaleY = 0.6,
-
     this.overlayFloorBtnWidthFracByShelf,
     this.overlayFloorBtnHeightFracOfQuarterByShelf,
     this.overlayFloorBtnStackScaleYByShelf,
     this.overlayFloorBtnCenterXFracByShelf,
     this.overlayFloorBtnQuarterCenterYFracByShelf,
-    this.overlayFloorBtnGlobalOffsetFracByShelf = const {
-      'L1': Offset(0.0, 0.08),
-      'R1': Offset(0.0, 0.08),
-    },
+    this.overlayFloorBtnGlobalOffsetFracByShelf = const {'L1': Offset(0.0, 0.08),'R1': Offset(0.0, 0.08)},
     this.overlayFloorBtnHeightOverrideFracByShelf = const {
       'L1': {'1층': 0.72},
       'R1': {'1층': 0.72},
@@ -144,14 +127,11 @@ class JinryangBDongMap extends StatefulWidget {
       'R1': {'4층': Offset(0, 0.035), '3층': Offset(0, 0.010), '2층': Offset(0, -0.014)},
       'C1': {'4층': Offset(0, 0.00), '3층': Offset(0, 0.00), '2층': Offset(0, -0.00), '1층': Offset(0, 0.04)},
     },
-
     this.initialShelf,
     this.initialFloor,
     this.initialFZone,
-
     this.weightOfItem,
     this.onCreateJig,
-
     this.autoOpenOnInit = false,
   });
 
@@ -166,15 +146,6 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   ImageStream? _mapStream;
   ImageStreamListener? _mapListener;
 
-  // ----- [신규] 등록 데이터 반영 -----
-  final List<JigItemData> _localAdded = [];
-  final ValueNotifier<int> _rev = ValueNotifier<int>(0); // 로컬 전용 리빌드 트리거
-
-  bool get _canMutateExternal =>
-      widget.jigsListenable is ValueNotifier<List<JigItemData>>;
-  bool get _useOverlayLocal => !_canMutateExternal;
-
-  // 마지막으로 본 위치 → FAB 프리필
   String? _lastSlot;   // L1/C1/R1/F1~F4
   String? _lastFloor;  // 1층~4층
 
@@ -185,49 +156,18 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     _AreaSpec('F4', 0.48, 0.60, 0.27, 0.33),
   ];
 
-  // 항상 최신 리스트 사용 (+ 필요시 로컬 추가분 오버레이)
-  List<JigItemData> get _items {
-    final base = widget.jigsListenable?.value ?? widget.allItems;
-    return _useOverlayLocal ? [...base, ..._localAdded] : base;
-  }
+  List<JigItemData> get _items =>
+      (widget.jigsListenable?.value) ?? JigsStore.items;
 
   @override
   void initState() {
     super.initState();
+    // 외부 리스너 & 전역 저장소 둘 다 구독
     widget.jigsListenable?.addListener(_onItemsChanged);
-  }
-
-  void _onItemsChanged() {
-    if (mounted) setState(() {}); // 포화도 재계산
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    for (final p in const [
-      'assets/bdong_map.png',
-      'assets/shelf_L1.png',
-      'assets/shelf_R1.png',
-      'assets/shelf_C1.png',
-    ]) {
-      precacheImage(AssetImage(p), context);
-    }
-    _resolveMapAspect();
-
-    if (!_didAutoOpen && widget.autoOpenOnInit) {
-      _didAutoOpen = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (!mounted) return;
-        if (widget.initialFZone != null) {
-          await _onFloorTap(widget.initialFZone!);
-        } else if (widget.initialShelf != null && widget.initialFloor != null) {
-          final label = widget.initialShelf!;
-          final img = _shelfImage(label);
-          if (img != null) {
-            await _openShelfWithInitial(label, img, widget.initialFloor!);
-          }
-        }
-      });
+    JigsStore.notifier.addListener(_onItemsChanged);
+    // 필요하면 최초 스냅샷을 전역에 올려둠(비어있을 때만)
+    if (JigsStore.items.isEmpty && widget.allItems.isNotEmpty) {
+      JigsStore.setInitial(widget.allItems);
     }
   }
 
@@ -238,28 +178,109 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       oldWidget.jigsListenable?.removeListener(_onItemsChanged);
       widget.jigsListenable?.addListener(_onItemsChanged);
     }
-    if (oldWidget.allItems != widget.allItems ||
-        oldWidget.maxCapacityF != widget.maxCapacityF ||
-        oldWidget.maxCapacityShelves != widget.maxCapacityShelves ||
-        oldWidget.weightOfItem != widget.weightOfItem) {
-      setState(() {});
-    }
   }
 
   @override
   void dispose() {
     widget.jigsListenable?.removeListener(_onItemsChanged);
+    JigsStore.notifier.removeListener(_onItemsChanged);
     if (_mapListener != null && _mapStream != null) {
       _mapStream!.removeListener(_mapListener!);
     }
     super.dispose();
   }
 
-  void _resolveMapAspect() {
+  void _onItemsChanged() {
+    if (mounted) setState(() {});
+  }
+
+  // ----- (아래 로직은 기존과 동일: 파싱/가중치/색상/다이얼로그 등) -----
+  String _norm(String s) => s.replaceAll(RegExp(r'\s+'), '').trim();
+  List<String> _parts(String loc) => loc.split('/').map((e) => e.trim()).toList();
+
+  String? _shelfOf(String loc) {
+    final p = _parts(loc); if (p.length < 2) return null; return p[1];
+  }
+  String? _floorOf(String loc) {
+    final p = _parts(loc); if (p.length < 3) return null;
+    final m = RegExp(r'(\d)').firstMatch(p[2]);
+    return (m == null) ? null : '${m.group(1)}층';
+  }
+  List<JigItemData> _itemsForShelfFloor(String shelf, String floor) {
+    final ns = _norm(shelf), nf = _norm(floor);
+    return _items.where((it) {
+      final loc = it.location.trim();
+      if (!loc.startsWith('진량공장 B동')) return false;
+      final s = _shelfOf(loc); final f = _floorOf(loc);
+      return _norm(s ?? '') == ns && _norm(f ?? '') == nf;
+    }).toList();
+  }
+  List<JigItemData> _itemsForFZone(String fzone) {
+    final nf = _norm(fzone).toUpperCase();
+    return _items.where((it) {
+      final loc = it.location.trim();
+      if (!loc.startsWith('진량공장 B동')) return false;
+      final p = _parts(loc); if (p.length < 2) return false;
+      return _norm(p[1]).toUpperCase() == nf;
+    }).toList();
+  }
+  int _weightOf(JigItemData it) {
+    if (widget.weightOfItem != null) return widget.weightOfItem!(it);
+    switch ((it.size ?? '').replaceAll(' ', '')) {
+      case '대형': case '대': return 5;
+      case '중형': case '중': return 3;
+      default: return 1;
+    }
+  }
+  int _usedWeightForShelfFloor(String shelf, String floor) =>
+      _itemsForShelfFloor(shelf, floor).fold(0, (sum, it) => sum + _weightOf(it));
+  int _usedWeightForFZone(String fzone) =>
+      _itemsForFZone(fzone).fold(0, (sum, it) => sum + _weightOf(it));
+  int _usedWeightForShelf(String shelf) =>
+      _usedWeightForShelfFloor(shelf, '1층') +
+          _usedWeightForShelfFloor(shelf, '2층') +
+          _usedWeightForShelfFloor(shelf, '3층') +
+          _usedWeightForShelfFloor(shelf, '4층');
+
+  String? _shelfImage(String shelf) {
+    switch (shelf) { case 'L1': return 'assets/shelf_L1.png';
+      case 'R1': return 'assets/shelf_R1.png';
+      case 'C1': return 'assets/shelf_C1.png';
+      default: return null; }
+  }
+
+  void _handleCreateJig(JigItemData newJig) {
+    // 외부에도 알리고(있다면), 전역 저장소에도 반영
+    widget.onCreateJig?.call(newJig);
+    JigsStore.add(newJig); // ✅ 앱 전역 반영
+    _lastSlot  = _shelfOf(newJig.location) ?? _lastSlot;
+    _lastFloor = _floorOf(newJig.location) ?? _lastFloor;
+  }
+
+  void _openAddJig({String? slot, String? floor}) {
+    String loc = '진량공장 B동';
+    if (slot != null && slot.isNotEmpty) loc += ' / $slot';
+    if (floor != null && floor.isNotEmpty && !(slot ?? '').startsWith('F')) {
+      loc += ' / $floor';
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => JigFormBottomSheet(
+        initialLocation: loc,
+        onSubmit: _handleCreateJig, // ✅ 전역 저장소에 추가
+      ),
+    );
+  }
+
+  void _resolveMapAspect() { /* (기존 그대로) */
     if (_mapListener != null && _mapStream != null) {
       _mapStream!.removeListener(_mapListener!);
-      _mapStream = null;
-      _mapListener = null;
+      _mapStream = null; _mapListener = null;
     }
     final stream = const AssetImage('assets/bdong_map.png')
         .resolve(createLocalImageConfiguration(context));
@@ -268,60 +289,38 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       if (!mounted) return;
       setState(() => _mapAspect = info.image.height == 0 ? null : info.image.width / info.image.height);
       stream.removeListener(_mapListener!);
-      _mapStream = null;
-      _mapListener = null;
+      _mapStream = null; _mapListener = null;
     }, onError: (_, __) {
       if (!mounted) return;
       setState(() => _mapAspect = null);
       stream.removeListener(_mapListener!);
-      _mapStream = null;
-      _mapListener = null;
+      _mapStream = null; _mapListener = null;
     });
     stream.addListener(_mapListener!);
   }
 
-  // ----- [신규] 공통 등록 처리 -----
-  void _onCreateJig(JigItemData newJig) {
-    // 1) 상위 콜백 우선
-    widget.onCreateJig?.call(newJig);
-
-    bool pushedGlobal = false;
-
-    // 2) 전역 ValueNotifier에 반영 (있다면)
-    final ln = widget.jigsListenable;
-    if (ln is ValueNotifier<List<JigItemData>>) {
-      final next = List<JigItemData>.from(ln.value)..add(newJig);
-      ln.value = next;
-      pushedGlobal = true;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    for (final p in const ['assets/bdong_map.png','assets/shelf_L1.png','assets/shelf_R1.png','assets/shelf_C1.png']) {
+      precacheImage(AssetImage(p), context);
     }
+    _resolveMapAspect();
 
-    // 3) 전역이 없으면 로컬에 추가하여 즉시 반영
-    if (!pushedGlobal) {
-      _localAdded.add(newJig);
-      _rev.value++;
-      setState(() {});
+    if (!_didAutoOpen && widget.autoOpenOnInit) {
+      _didAutoOpen = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        if (widget.initialFZone != null) { await _onFloorTap(widget.initialFZone!); }
+        else if (widget.initialShelf != null && widget.initialFloor != null) {
+          final label = widget.initialShelf!;
+          final img = _shelfImage(label);
+          if (img != null) await _openShelfWithInitial(label, img, widget.initialFloor!);
+        }
+      });
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('지그가 등록되었습니다.')),
-    );
   }
 
-  // 전역/로컬 변경을 리슨하여 child를 다시 그림
-  Widget _listenItems(Widget Function() builder) {
-    if (widget.jigsListenable != null) {
-      return ValueListenableBuilder<List<JigItemData>>(
-        valueListenable: widget.jigsListenable!,
-        builder: (_, __, ___) => builder(),
-      );
-    }
-    return ValueListenableBuilder<int>(
-      valueListenable: _rev,
-      builder: (_, __, ___) => builder(),
-    );
-  }
-
-  // ---------- UI ----------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -335,13 +334,11 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
 
           Rect rectFromFrac(double l, double t, double w, double h) =>
               Rect.fromLTWH(offX + l * dispW, offY + t * dispH, w * dispW, h * dispH);
-
           Rect scaleRect(Rect r, {required double wf, required double hf}) {
             final cx = r.left + r.width / 2, cy = r.top + r.height / 2;
             final nw = r.width * wf, nh = r.height * hf;
             return Rect.fromLTWH(cx - nw / 2, cy - nh / 2, nw, nh);
           }
-
           Rect applyScale(Rect base, String label, {required bool isShelf}) {
             double wf = isShelf ? widget.shelfButtonWidthFactor : widget.fButtonWidthFactor;
             double hf = isShelf ? widget.shelfButtonHeightFactor : widget.fButtonHeightFactor;
@@ -364,39 +361,25 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
           return Stack(children: [
             Positioned(
               left: offX, top: offY, width: dispW, height: dispH,
-              child: Image.asset(
-                'assets/bdong_map.png',
-                width: dispW, height: dispH,
-                fit: BoxFit.fill, filterQuality: FilterQuality.low,
+              child: Image.asset('assets/bdong_map.png',
+                width: dispW, height: dispH, fit: BoxFit.fill, filterQuality: FilterQuality.low,
                 cacheWidth: (dispW * MediaQuery.of(context).devicePixelRatio).round(),
               ),
             ),
-
-            // 선반 버튼(4층 합산 포화도 색상)
             ...shelves.map((s) {
               final base = rectFromFrac(s.left, s.top, s.width, s.height);
               final rect = applyScale(base, s.label, isShelf: true);
-
               final usedShelf = _usedWeightForShelf(s.label);
               final maxTotal = widget.maxCapacityShelves * 4;
               final shelfColor = colorForUtilBand(used: usedShelf, maxTotal: maxTotal);
-
-              return _ShelfButton(
-                spec: s,
-                rect: rect,
-                onTap: () => _onShelfTap(s),
-                backgroundColor: shelfColor,
-              );
+              return _ShelfButton(spec: s, rect: rect, onTap: () => _onShelfTap(s), backgroundColor: shelfColor);
             }),
-
-            // F 버튼
             ...fButtons.map((a) {
               final base = rectFromFrac(a.left, a.top, a.width, a.height);
               final rect = applyScale(base, a.label, isShelf: false);
               final used = _usedWeightForFZone(a.label);
               return _FloorSquareButton(
-                label: a.label,
-                rect: rect,
+                label: a.label, rect: rect,
                 color: colorForUtil(used: used, max: widget.maxCapacityF),
                 onTap: () => _onFloorTap(a.label),
               );
@@ -420,111 +403,6 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     );
   }
 
-  // -------- 위치 유틸 --------
-  String _norm(String s) => s.replaceAll(RegExp(r'\s+'), '').trim();
-  List<String> _parts(String loc) => loc.split('/').map((e) => e.trim()).toList();
-
-  String? _shelfOf(String loc) {
-    final p = _parts(loc);
-    if (p.length < 2) return null;
-    return p[1];
-  }
-
-  String? _floorOf(String loc) {
-    final p = _parts(loc);
-    if (p.length < 3) return null;
-    final m = RegExp(r'(\d)').firstMatch(p[2]);
-    return (m == null) ? null : '${m.group(1)}층';
-  }
-
-  List<JigItemData> _itemsForShelfFloor(String shelf, String floor) {
-    final ns = _norm(shelf);
-    final nf = _norm(floor);
-    return _items.where((it) {
-      final loc = it.location.trim();
-      if (!loc.startsWith('진량공장 B동')) return false;
-      final s = _shelfOf(loc);
-      final f = _floorOf(loc);
-      return _norm(s ?? '') == ns && _norm(f ?? '') == nf;
-    }).toList();
-  }
-
-  List<JigItemData> _itemsForFZone(String fzone) {
-    final nf = _norm(fzone).toUpperCase();
-    return _items.where((it) {
-      final loc = it.location.trim();
-      if (!loc.startsWith('진량공장 B동')) return false;
-      final p = _parts(loc);
-      if (p.length < 2) return false;
-      return _norm(p[1]).toUpperCase() == nf;
-    }).toList();
-  }
-
-  // -------- 가중치(소/중/대) 합산 --------
-  int _weightOf(JigItemData it) {
-    if (widget.weightOfItem != null) return widget.weightOfItem!(it);
-    switch ((it.size ?? '').replaceAll(' ', '')) {
-      case '대형':
-      case '대':
-        return 5;
-      case '중형':
-      case '중':
-        return 3;
-      case '소형':
-      case '소':
-      default:
-        return 1;
-    }
-  }
-
-  int _usedWeightForShelfFloor(String shelf, String floor) =>
-      _itemsForShelfFloor(shelf, floor).fold(0, (sum, it) => sum + _weightOf(it));
-
-  int _usedWeightForFZone(String fzone) =>
-      _itemsForFZone(fzone).fold(0, (sum, it) => sum + _weightOf(it));
-
-  // 선반(L1/R1/C1)의 1~4층 가중치 합
-  int _usedWeightForShelf(String shelf) =>
-      _usedWeightForShelfFloor(shelf, '1층') +
-          _usedWeightForShelfFloor(shelf, '2층') +
-          _usedWeightForShelfFloor(shelf, '3층') +
-          _usedWeightForShelfFloor(shelf, '4층');
-
-  // -------- 액션/다이얼로그 & 폼 --------
-  String? _shelfImage(String shelf) {
-    switch (shelf) {
-      case 'L1': return 'assets/shelf_L1.png';
-      case 'R1': return 'assets/shelf_R1.png';
-      case 'C1': return 'assets/shelf_C1.png';
-      default: return null;
-    }
-  }
-
-  // 맵에서 ‘지그 등록’ 폼 열기 (현재 보고 있는 위치로 프리필)
-  void _openAddJig({String? slot, String? floor}) {
-    String loc = '진량공장 B동';
-    if (slot != null && slot.isNotEmpty) loc += ' / $slot';
-    // F1~F4는 층 없음
-    if (floor != null && floor.isNotEmpty && !(slot ?? '').startsWith('F')) {
-      loc += ' / $floor';
-    }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (sheetCtx) => JigFormBottomSheet(
-        initialLocation: loc,
-        onSubmit: (newJig) {
-          _onCreateJig(newJig);   // ✅ 실제 데이터에 반영
-        },
-      ),
-    );
-  }
-
   Future<void> _openShelfWithInitial(String shelf, String imagePath, String initialFloor) async {
     if (_dialogOpen || !mounted) return;
     setState(() => _dialogOpen = true);
@@ -535,9 +413,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       await precacheImage(provider, context);
       await Future<void>.delayed(Duration.zero);
       await _showShelfDialog(context, shelf, imagePath, initialSelectedFloor: initialFloor);
-    } finally {
-      if (mounted) setState(() => _dialogOpen = false);
-    }
+    } finally { if (mounted) setState(() => _dialogOpen = false); }
   }
 
   Future<void> _onShelfTap(_ShelfSpec s) async {
@@ -550,26 +426,19 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       await precacheImage(provider, context);
       await Future<void>.delayed(Duration.zero);
       await _showShelfDialog(context, s.label, s.imagePath);
-    } finally {
-      if (mounted) setState(() => _dialogOpen = false);
-    }
+    } finally { if (mounted) setState(() => _dialogOpen = false); }
   }
 
   Future<void> _onFloorTap(String label) async {
     if (_dialogOpen || !mounted) return;
-    setState(() {
-      _dialogOpen = true;
-      _lastSlot = label;   // F1~F4
-      _lastFloor = null;
-    });
+    setState(() { _dialogOpen = true; _lastSlot = label; _lastFloor = null; });
     try {
-      await _showFZoneDialog(context, label); // ✅ 내부에서 리스닝하여 최신값 사용
-    } finally {
-      if (mounted) setState(() => _dialogOpen = false);
-    }
+      final items = _itemsForFZone(label);
+      await _showFZoneDialog(context, label, items);
+    } finally { if (mounted) setState(() => _dialogOpen = false); }
   }
 
-  Future<void> _showFZoneDialog(BuildContext context, String areaLabel) async {
+  Future<void> _showFZoneDialog(BuildContext context, String areaLabel, List<JigItemData> items) async {
     return showDialog<void>(
       context: context, barrierDismissible: true,
       builder: (dctx) => AlertDialog(
@@ -578,21 +447,15 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
         title: Text('$areaLabel Zone', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         content: SizedBox(
           width: 560, height: 380,
-          child: _listenItems(() {
-            final items = _itemsForFZone(areaLabel);
-            return items.isEmpty
-                ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
-                : _JigListPanel(items: items);
-          }),
+          child: items.isEmpty
+              ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
+              : _JigListPanel(items: items),
         ),
         actions: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 4, 12),
             child: TextButton(
-              onPressed: () {
-                Navigator.pop(dctx);
-                _openAddJig(slot: areaLabel); // F존에는 층 없음
-              },
+              onPressed: () { Navigator.pop(dctx); _openAddJig(slot: areaLabel); },
               child: const Text('+ 지그 등록'),
             ),
           ),
@@ -605,12 +468,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     );
   }
 
-  Future<void> _showShelfDialog(
-      BuildContext context,
-      String label,
-      String imagePath, {
-        String? initialSelectedFloor,
-      }) async {
+  Future<void> _showShelfDialog(BuildContext context,String label,String imagePath,{String? initialSelectedFloor}) async {
     return showDialog<void>(
       context: context, barrierDismissible: true,
       builder: (dialogCtx) {
@@ -640,11 +498,11 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               final u3 = _usedWeightForShelfFloor(label, '3층');
               final u4 = _usedWeightForShelfFloor(label, '4층');
 
-              final perShelfW   = widget.overlayFloorBtnWidthFracByShelf?[label];
-              final perShelfH   = widget.overlayFloorBtnHeightFracOfQuarterByShelf?[label];
+              final perShelfW = widget.overlayFloorBtnWidthFracByShelf?[label];
+              final perShelfH = widget.overlayFloorBtnHeightFracOfQuarterByShelf?[label];
               final perShelfStk = widget.overlayFloorBtnStackScaleYByShelf?[label];
-              final perShelfCX  = widget.overlayFloorBtnCenterXFracByShelf?[label];
-              final perShelfQY  = widget.overlayFloorBtnQuarterCenterYFracByShelf?[label];
+              final perShelfCX = widget.overlayFloorBtnCenterXFracByShelf?[label];
+              final perShelfQY = widget.overlayFloorBtnQuarterCenterYFracByShelf?[label];
               final perShelfOff = widget.overlayFloorBtnGlobalOffsetFracByShelf?[label];
 
               final perFloorHeightForThisShelf =
@@ -659,11 +517,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                 child: ShelfOverlayViewer4Floors(
                   imagePath: imagePath,
                   shelfLabel: label,
-                  onZoneTap: (z) {
-                    setSB(() => dialogZone = z);
-                    _lastSlot = label;
-                    _lastFloor = z;
-                  },
+                  onZoneTap: (z) { setSB(() => dialogZone = z); _lastSlot = label; _lastFloor = z; },
                   bgProviderOverride: bgProvider,
                   inlinePanel: true,
                   floor1Capacity: u1, floor2Capacity: u2, floor3Capacity: u3, floor4Capacity: u4,
@@ -678,19 +532,14 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
                   btnStackScaleY: perShelfStk ?? widget.overlayFloorBtnStackScaleY,
                   maxCapacity: widget.maxCapacityShelves,
                   initialSelectedFloor: initialSelectedFloor,
-                  // ✅ 상세 리스트는 최신값을 리스닝하여 빌드
                   detailsBuilder: (shelf, floor) {
-                    return _listenItems(() {
-                      final items = _itemsForShelfFloor(shelf, floor);
-                      return _JigDetailPanel(
-                        shelf: shelf,
-                        floor: floor,
-                        showHeader: false,
-                        child: items.isEmpty
-                            ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
-                            : _JigListPanel(items: items),
-                      );
-                    });
+                    final items = _itemsForShelfFloor(shelf, floor);
+                    return _JigDetailPanel(
+                      shelf: shelf, floor: floor, showHeader: false,
+                      child: items.isEmpty
+                          ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
+                          : _JigListPanel(items: items),
+                    );
                   },
                 ),
               );
@@ -699,10 +548,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 4, 12),
                 child: TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogCtx);
-                    _openAddJig(slot: label, floor: dialogZone);
-                  },
+                  onPressed: () { Navigator.pop(dialogCtx); _openAddJig(slot: label, floor: dialogZone); },
                   child: const Text('+ 지그 등록'),
                 ),
               ),
@@ -718,50 +564,27 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   }
 }
 
-class _ShelfSpec {
-  final String label;
-  final double left, top, width, height;
-  final String imagePath;
-  const _ShelfSpec(this.label, this.left, this.top, this.width, this.height, this.imagePath);
-}
-
-class _AreaSpec {
-  final String label;
-  final double left, top, width, height;
-  const _AreaSpec(this.label, this.left, this.top, this.width, this.height);
-}
+class _ShelfSpec { final String label; final double left, top, width, height; final String imagePath;
+const _ShelfSpec(this.label, this.left, this.top, this.width, this.height, this.imagePath); }
+class _AreaSpec { final String label; final double left, top, width, height;
+const _AreaSpec(this.label, this.left, this.top, this.width, this.height); }
 
 class _ShelfButton extends StatelessWidget {
-  final _ShelfSpec spec;
-  final Rect rect;
-  final VoidCallback onTap;
-  final Color backgroundColor;
-
-  const _ShelfButton({
-    required this.spec,
-    required this.rect,
-    required this.onTap,
-    this.backgroundColor = Colors.transparent,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  final _ShelfSpec spec; final Rect rect; final VoidCallback onTap; final Color backgroundColor;
+  const _ShelfButton({required this.spec, required this.rect, required this.onTap, this.backgroundColor = Colors.transparent});
+  @override Widget build(BuildContext context) {
     return Positioned(
       left: rect.left, top: rect.top, width: rect.width, height: rect.height,
       child: TextButton(
         onPressed: onTap,
-        style: TextButton.styleFrom(
-          backgroundColor: backgroundColor,
-          padding: EdgeInsets.zero,
-          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        ),
+        style: TextButton.styleFrom(backgroundColor: backgroundColor, padding: EdgeInsets.zero,
+            shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero)),
         child: Align(
           alignment: Alignment.center,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-            child: Text(spec.label,
-                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            child: Text(spec.label, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           ),
         ),
       ),
@@ -770,14 +593,9 @@ class _ShelfButton extends StatelessWidget {
 }
 
 class _FloorSquareButton extends StatelessWidget {
-  final String label;
-  final Rect rect;
-  final Color color;
-  final VoidCallback onTap;
+  final String label; final Rect rect; final Color color; final VoidCallback onTap;
   const _FloorSquareButton({required this.label, required this.rect, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
+  @override Widget build(BuildContext context) {
     return Positioned(
       left: rect.left, top: rect.top, width: rect.width, height: rect.height,
       child: Material(
@@ -788,8 +606,7 @@ class _FloorSquareButton extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-              child: Text(label,
-                  style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
+              child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
             ),
           ),
         ),
@@ -797,6 +614,9 @@ class _FloorSquareButton extends StatelessWidget {
     );
   }
 }
+
+// (아래 ShelfOverlayViewer4Floors / _JigDetailPanel / _JigListPanel 클래스들은 기존 그대로 유지)
+
 
 class ShelfOverlayViewer4Floors extends StatefulWidget {
   final String imagePath;
