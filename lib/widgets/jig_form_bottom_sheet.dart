@@ -53,6 +53,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   String location = '진량공장 B동';
   String jigSize = JigItemData.sizeSmall;
 
+  String jigHeight = '30cm 미만';
+
   String? bDongSlot;
   String? bDongFloor;
 
@@ -553,14 +555,47 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge].map((s) {
-                    final isSelected = jigSize == s;
-                    return _chip44(
-                      label: s,
-                      selected: isSelected,
-                      onSelected: (_) => setState(() => jigSize = s),
-                    );
-                  }).toList(),
+                  children: [
+                    _chip44(
+                      label: '소형 (15 ~ 20cm 미만)',
+                      selected: jigSize == JigItemData.sizeSmall,
+                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeSmall),
+                    ),
+                    _chip44(
+                      label: '중형 (20 ~ 50cm 미만)',
+                      selected: jigSize == JigItemData.sizeMedium,
+                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeMedium),
+                    ),
+                    _chip44(
+                      label: '대형 (50cm 이상)',
+                      selected: jigSize == JigItemData.sizeLarge,
+                      onSelected: (_) => setState(() => jigSize = JigItemData.sizeLarge),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+                const Text("지그 높이", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    _chip44(
+                      label: '30cm 미만',
+                      selected: jigHeight == '30cm 미만',
+                      onSelected: (_) => setState(() => jigHeight = '30cm 미만'),
+                    ),
+                    _chip44(
+                      label: '50cm 미만',
+                      selected: jigHeight == '50cm 미만',
+                      onSelected: (_) => setState(() => jigHeight = '50cm 미만'),
+                    ),
+                    _chip44(
+                      label: '50cm 이상',
+                      selected: jigHeight == '50cm 이상',
+                      onSelected: (_) => setState(() => jigHeight = '50cm 이상'),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
