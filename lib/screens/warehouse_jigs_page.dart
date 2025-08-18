@@ -468,6 +468,10 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                       onLikePressed: () => _toggleLike(item),
                       storageDate: item.storageDate,
                       disposalDate: item.disposalDate,
+
+                      // ★ 추가: 카드에서 사이즈/높이 배지 표시
+                      size: item.size,
+                      jigHeight: item.jigHeight,
                     ),
                     Positioned(
                       top: 0,

@@ -1,3 +1,4 @@
+// lib/widgets/jig_form_bottom_sheet.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,11 +11,15 @@ class JigFormBottomSheet extends StatefulWidget {
   // 맵에서 보낸 최초 위치 프리필
   final String? initialLocation;
 
+  // 현재 위치/선반/층에 따른 허용 높이 규칙(없으면 JigItemData.resolveHeightOptions 사용)
+  final List<String> Function(String location, String? slot, String? floor)? heightPolicyResolver;
+
   const JigFormBottomSheet({
     super.key,
     this.editItem,
     required this.onSubmit,
     this.initialLocation,
+    this.heightPolicyResolver,
   });
 
   @override
@@ -50,11 +55,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     JigItemData.sizeLarge: '대형 (50cm 이상)',
   };
 
-  // 지그 높이 옵션
+  // 지그 높이 옵션(항상 3개 모두 노출; 규칙은 경고로 처리)
   static const List<String> _jigHeightOptions = [
-    '30cm 미만',
-    '50cm 미만',
-    '50cm 이상',
+    JigItemData.heightLt30,
+    JigItemData.heightLt50,
+    JigItemData.heightGte50,
   ];
 
   // ---- 컨트롤러 & 상태 ----
@@ -62,12 +67,16 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   late TextEditingController descriptionController;
   late TextEditingController registrantController;
 
+  // 제목/필수 항목 에러 표시
   final FocusNode _titleFocus = FocusNode();
   bool _titleError = false;
+  bool _heightError = false;
+  bool _slotError = false;
+  bool _floorError = false;
 
   String location = '진량공장 B동';
   String jigSize = JigItemData.sizeSmall;
-  String? jigHeight; // 신규 항목(필요 시 모델에 저장 로직 추가)
+  String? jigHeight; // 신규 항목
 
   String? bDongSlot;
   String? bDongFloor;
@@ -142,6 +151,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     jigSize   = widget.editItem?.size ?? jigSize;
     startDate = widget.editItem?.storageDate;
     endDate   = widget.editItem?.disposalDate;
+
+    // 높이
+    jigHeight = widget.editItem?.jigHeight;
   }
 
   @override
@@ -241,7 +253,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       if (isStart) {
         startDate = DateTime(picked.year, picked.month, picked.day);
         if (endDate != null && endDate!.isBefore(startDate!)) {
-          endDate = startDate; // 간단 보정
+          endDate = startDate;
         }
       } else {
         endDate = DateTime(picked.year, picked.month, picked.day);
@@ -257,47 +269,107 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return '$y-$m-$day';
   }
 
-  // ---- 배광 요약/초기화 ----
-  void _clearBaekSelection() {
-    setState(() {
-      baekSlot = null;
-      baekFloor = null;
-    });
+  // ---- 높이 규칙 체크 ----
+  List<String> _allowedHeights() {
+    String? slot, floor;
+    if (location == '진량공장 B동') {
+      slot = bDongSlot; floor = bDongFloor;
+    } else if (location == '배광시험동 2층') {
+      slot = baekSlot; floor = baekFloor;
+    }
+    final resolver = widget.heightPolicyResolver ?? JigItemData.resolveHeightOptions;
+    return resolver(location, slot, floor);
   }
 
-  Widget _baekSummaryWidget() {
-    final hasSelection = (baekSlot != null) || (baekFloor != null);
-    final summary = (baekSlot == null)
-        ? '선택 없음 · 지그 위치를 먼저 선택하세요'
-        : '선택: $baekSlot${baekFloor != null ? ' · $baekFloor' : ' · 층 미선택'}';
+  bool get _isHeightSelectionAllowed {
+    if (jigHeight == null) return true; // 미선택은 경고 미표시(필수 검사는 별도)
+    return _allowedHeights().contains(jigHeight);
+  }
 
+  // ---- 필수 항목 로직 ----
+  bool get _needSlotSelection {
+    // B동/배광시험동은 '지그 위치(슬롯)' 필수, 후생동 4층은 슬롯 개념 없음
+    return location == '진량공장 B동' || location == '배광시험동 2층';
+  }
+
+  bool get _isSlotSelected {
+    if (!_needSlotSelection) return true;
+    if (location == '진량공장 B동') return bDongSlot != null && bDongSlot!.isNotEmpty;
+    if (location == '배광시험동 2층') return baekSlot != null && baekSlot!.isNotEmpty;
+    return true;
+  }
+
+  bool get _needsFloorSelected {
+    if (location == '진량공장 B동') {
+      if (bDongSlot == null) return false;
+      return _bdongSlotsNeedFloor.contains(bDongSlot!); // L1/C1/R1만 층 필수
+    }
+    if (location == '배광시험동 2층') {
+      return baekSlot != null; // 배광시험동은 슬롯 선택 시 층 필수
+    }
+    return false;
+  }
+
+  bool get _isFloorSelected {
+    if (!_needsFloorSelected) return true;
+    if (location == '진량공장 B동') return bDongFloor != null && bDongFloor!.isNotEmpty;
+    if (location == '배광시험동 2층') return baekFloor != null && baekFloor!.isNotEmpty;
+    return true;
+  }
+
+  // 오류 알약 UI
+  Widget _errorPill(String msg) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withOpacity(0.25)),
+        color: const Color(0xFFFFE5E5),
+        border: Border.all(color: const Color(0xFFFF6B6B)),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.info_outline, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              summary,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
+          const Icon(Icons.error_outline, size: 16, color: Color(0xFFB00020)),
+          const SizedBox(width: 6),
+          Text(
+            msg,
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFFB00020)),
           ),
-          if (hasSelection)
-            TextButton.icon(
-              onPressed: _clearBaekSelection,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('초기화'),
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
-            ),
         ],
       ),
     );
+  }
+
+  // ---- 제출 전 검증 (필수 항목) ----
+  bool _validateAndMarkErrors() {
+    bool ok = true;
+
+    // 높이
+    if (jigHeight == null || jigHeight!.trim().isEmpty) {
+      _heightError = true;
+      ok = false;
+    } else {
+      _heightError = false;
+    }
+
+    // 슬롯
+    if (_needSlotSelection && !_isSlotSelected) {
+      _slotError = true;
+      ok = false;
+    } else {
+      _slotError = false;
+    }
+
+    // 층
+    if (_needsFloorSelected && !_isFloorSelected) {
+      _floorError = true;
+      ok = false;
+    } else {
+      _floorError = false;
+    }
+
+    setState(() {});
+    return ok;
   }
 
   // ---- 로케이션 문자열 안전 구성 ----
@@ -323,10 +395,32 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   void _submit() {
     final trimmedTitle = titleController.text.trim();
 
+    // 제목 에러 표시
     if (trimmedTitle.isEmpty) {
       setState(() => _titleError = true);
       _titleFocus.requestFocus();
+    }
+
+    // 높이/슬롯/층 필수 검증
+    final okRequired = _validateAndMarkErrors();
+
+    // 하나라도 에러면 등록 차단
+    if (_titleError || !okRequired) {
+      if (_heightError) {
+        _toast('지그 높이를 선택해주세요.');
+      } else if (_slotError) {
+        _toast('지그 위치를 선택해주세요.');
+      } else if (_floorError) {
+        _toast('층을 선택해주세요.');
+      } else {
+        _toast('필수 항목을 확인해주세요.');
+      }
       return;
+    }
+
+    // 선택이 규칙에 어긋나더라도(허용 외 높이) 등록은 허용
+    if (!_isHeightSelectionAllowed) {
+      _toast('지그 높이 때문에 보관이 어려울 수 있습니다. 그래도 등록합니다.');
     }
 
     final String finalLocation = _buildLocationString();
@@ -344,7 +438,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
-      // TODO: jigHeight를 모델에 저장하려면 JigItemData에 필드를 추가하세요.
+      jigHeight: jigHeight, // 저장
     );
 
     widget.onSubmit(newJig);
@@ -537,7 +631,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
                 const SizedBox(height: 10),
 
-                // 기본 필드들
+                // 제목 (필수, 에러 하이라이트)
                 TextField(
                   controller: titleController,
                   focusNode: _titleFocus,
@@ -597,17 +691,68 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   }).toList(),
                 ),
 
+                // 지그 높이: 모든 옵션 노출 + (필수 미선택: 빨간 에러) / (규칙 위반: 노랑 경고)
                 const SizedBox(height: 16),
-                const Text("지그 높이", style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text("지그 높이", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 8),
+                    if (_heightError) _errorPill('지그 높이를 선택해주세요.')
+                    else if (!_isHeightSelectionAllowed)
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF3CD),
+                            border: Border.all(color: const Color(0xFFEEA236)),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFF8A6D3B)),
+                              SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  '지그 높이 때문에 보관이 어려울 수 있습니다.',
+                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF8A6D3B)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
                   children: _jigHeightOptions.map((h) {
                     final isSelected = jigHeight == h;
-                    return _chip44(
-                      label: h,
-                      selected: isSelected,
-                      onSelected: (_) => setState(() => jigHeight = h),
+                    final disallowedSelected = isSelected && !_allowedHeights().contains(h);
+                    return SizedBox(
+                      height: _CHIP_HEIGHT_BDONG,
+                      child: ChoiceChip(
+                        label: Text(
+                          h,
+                          style: TextStyle(
+                            color: isSelected ? Colors.white : Colors.black,
+                            fontWeight: disallowedSelected ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                        ),
+                        selected: isSelected,
+                        selectedColor: disallowedSelected ? Colors.redAccent : Colors.blue,
+                        backgroundColor: Colors.white,
+                        side: disallowedSelected
+                            ? const BorderSide(color: Colors.redAccent, width: 1.5)
+                            : const BorderSide(color: Colors.transparent),
+                        onSelected: (_) => setState(() {
+                          jigHeight = h;
+                          if (_heightError) _heightError = false;
+                        }),
+                      ),
                     );
                   }).toList(),
                 ),
@@ -635,6 +780,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           baekSlot = null;
                           baekFloor = null;
                         }
+                        _slotError = false;
+                        _floorError = false;
                       }),
                     );
                   }).toList(),
@@ -643,7 +790,13 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 // 진량공장 B동 세부
                 if (location == '진량공장 B동') ...[
                   const SizedBox(height: 12),
-                  const Text("지그 위치", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      const Text("지그 위치", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
+                    ],
+                  ),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
@@ -658,13 +811,21 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           if (!_bdongSlotsNeedFloor.contains(slot)) {
                             bDongFloor = null;
                           }
+                          if (_slotError) _slotError = false;
+                          _floorError = false;
                         }),
                       );
                     }).toList(),
                   ),
                   if (bDongSlot != null && _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
                     const SizedBox(height: 12),
-                    const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        if (_floorError) _errorPill('층을 선택해주세요.'),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -674,7 +835,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         return _chip44(
                           label: f,
                           selected: isSelected,
-                          onSelected: (_) => setState(() => bDongFloor = f),
+                          onSelected: (_) => setState(() {
+                            bDongFloor = f;
+                            if (_floorError) _floorError = false;
+                          }),
                         );
                       }).toList(),
                     ),
@@ -690,7 +854,13 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 // 배광시험동 2층 세부
                 if (location == '배광시험동 2층') ...[
                   const SizedBox(height: 12),
-                  const Text("지그 위치 (스크롤)", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Row(
+                    children: [
+                      const Text("지그 위치 (스크롤)", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(width: 8),
+                      if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
+                    ],
+                  ),
                   const SizedBox(height: 6),
 
                   // 선택 요약
@@ -723,6 +893,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                                     onTap: () => setState(() {
                                       baekSlot = r;
                                       baekFloor = null;
+                                      if (_slotError) _slotError = false;
+                                      _floorError = false;
                                     }),
                                   ),
                                 )
@@ -739,6 +911,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                                     onTap: () => setState(() {
                                       baekSlot = l;
                                       baekFloor = null;
+                                      if (_slotError) _slotError = false;
+                                      _floorError = false;
                                     }),
                                   ),
                                 )
@@ -752,7 +926,13 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   ),
                   if (baekSlot != null) ...[
                     const SizedBox(height: 12),
-                    const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        if (_floorError) _errorPill('층을 선택해주세요.'),
+                      ],
+                    ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
@@ -762,7 +942,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         return _chip44(
                           label: f,
                           selected: isSelected,
-                          onSelected: (_) => setState(() => baekFloor = f),
+                          onSelected: (_) => setState(() {
+                            baekFloor = f;
+                            if (_floorError) _floorError = false;
+                          }),
                         );
                       }).toList(),
                     ),
@@ -810,6 +993,59 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // ---- 배광시험동 선택 요약 ----
+  void _clearBaekSelection() {
+    setState(() {
+      baekSlot = null;
+      baekFloor = null;
+      _slotError = false;
+      _floorError = false;
+    });
+  }
+
+  Widget _baekSummaryWidget() {
+    final hasSelection = (baekSlot != null) || (baekFloor != null);
+    final summary = (baekSlot == null)
+        ? '선택 없음 · 지그 위치를 먼저 선택하세요'
+        : '선택: $baekSlot${baekFloor != null ? ' · $baekFloor' : ' · 층 미선택'}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: (_slotError || _floorError)
+              ? const Color(0xFFFF6B6B)
+              : Colors.blue.withOpacity(0.25),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            (_slotError || _floorError) ? Icons.error_outline : Icons.info_outline,
+            size: 18,
+            color: (_slotError || _floorError) ? const Color(0xFFB00020) : null,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              summary,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (hasSelection)
+            TextButton.icon(
+              onPressed: _clearBaekSelection,
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('초기화'),
+              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+            ),
+        ],
       ),
     );
   }

@@ -142,7 +142,7 @@ class JinryangBDongMap extends StatefulWidget {
     this.weightOfItem,
     this.onCreateJig,
 
-    this.autoOpenOnInit = false, // 자동 팝업 기본 비활성화
+    this.autoOpenOnInit = false,
   });
 
   @override
@@ -177,7 +177,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   }
 
   void _onItemsChanged() {
-    if (mounted) setState(() {}); // 포화도 재계산
+    if (mounted) setState(() {});
   }
 
   @override
@@ -193,7 +193,6 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     }
     _resolveMapAspect();
 
-    // ✅ 자동 오픈은 플래그가 true일 때만
     if (!_didAutoOpen && widget.autoOpenOnInit) {
       _didAutoOpen = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -391,8 +390,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   // -------- 가중치(소/중/대) 합산 --------
   int _weightOf(JigItemData it) {
     if (widget.weightOfItem != null) return widget.weightOfItem!(it);
-    final size = (it.size ?? '').replaceAll(' ', '');
-    switch (size) {
+    switch ((it.size ?? '').replaceAll(' ', '')) {
       case '대형':
       case '대':
         return 5;
@@ -439,8 +437,9 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => JigFormBottomSheet(
-        initialLocation: loc,                    // ✅ 프리필만 전달
+        initialLocation: loc,                    // 프리필만 전달
         onSubmit: (newJig) => widget.onCreateJig?.call(newJig),
+        // heightPolicyResolver 전달 없어도 JigItemData.resolveHeightOptions 기본 사용
       ),
     );
   }
@@ -991,6 +990,11 @@ class _JigListPanel extends StatelessWidget {
           onLikePressed: () {},
           storageDate: it.storageDate,
           disposalDate: it.disposalDate,
+
+          // 배지/툴팁 적용을 위한 추가 전달
+          size: it.size,
+          jigHeight: it.jigHeight,
+          // heightPolicyResolver 전달 생략 시 JigItemData.resolveHeightOptions 기본 사용
         );
       },
     );
