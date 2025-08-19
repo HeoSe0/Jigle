@@ -1,6 +1,6 @@
 // lib/screens/my_jigs_page.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ✅ ValueListenable
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
@@ -11,13 +11,13 @@ import '../my_jig_page/event_screen.dart';
 
 import '../widgets/jig_item_data.dart';
 import '../widgets/jig_item.dart';
-import '../widgets/jig_form_bottom_sheet.dart'; // ✅ 수정 폼 추가
+import '../widgets/jig_form_bottom_sheet.dart';
 
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({
     super.key,
     required this.likedItems,
-    required this.jigsNotifier, // ✅ 전체 지그 목록
+    required this.jigsNotifier,
   });
 
   final List<JigItemData> likedItems;
@@ -40,18 +40,20 @@ class MyJigsPage extends StatelessWidget {
                 items: [
                   const _MenuSpec('나의 지그', MyJigScreen()),
                   const _MenuSpec('나의 샘플', MySampleScreen()),
-                  // ✅ WarehouseScreen에 전체 지그 전달
-                  _MenuSpec('창고 현황', WarehouseScreen(itemsListenable: jigsNotifier)), // ✅ 여기!
+                  // ✅ 창고 현황에 전역 지그 리스트 전달
+                  _MenuSpec('창고 현황', WarehouseScreen(itemsListenable: jigsNotifier)),
                   const _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
               const SizedBox(height: 6),
               QuickActions(
-                // ✅ 관심목록 화면에 jigsNotifier도 넘겨서 저장 시 전체 목록 동기화
-                onTapLiked: () => _push(context, LikedJigsScreen(
-                  likedItems: likedItems,
-                  jigsNotifier: jigsNotifier,
-                )),
+                onTapLiked: () => _push(
+                  context,
+                  LikedJigsScreen(
+                    likedItems: likedItems,
+                    jigsNotifier: jigsNotifier,
+                  ),
+                ),
                 onTapRecent: () => _push(context, const RecentScreen()),
                 onTapEvent: () => _push(context, const EventScreen()),
               ),
@@ -150,12 +152,16 @@ class QuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+      // 바텀 내비/제스처바와 겹치지 않게 살짝 띄움
+      padding: EdgeInsets.fromLTRB(12, 16, 12, 16 + bottomSafe / 2),
       child: Row(
         children: [
           _IconBox(icon: Icons.favorite_border, label: '관심목록', onTap: onTapLiked),
+          const SizedBox(width: 8),
           _IconBox(icon: Icons.history, label: '최근 본 글', onTap: onTapRecent),
+          const SizedBox(width: 8),
           _IconBox(icon: Icons.star_border, label: '공지사항', onTap: onTapEvent),
         ],
       ),
@@ -172,17 +178,25 @@ class _IconBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: AspectRatio(
-        aspectRatio: 2,
+      child: ConstrainedBox(
+        // 🔧 세로 최소 높이 보장 → 아이콘/텍스트가 좁은 화면에서도 잘리지 않음
+        constraints: const BoxConstraints(minHeight: 84),
         child: _CardButton(
           onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 4),
-              Text(label, textAlign: TextAlign.center),
-            ],
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon),
+                const SizedBox(height: 6),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -227,7 +241,7 @@ class LikedJigsScreen extends StatefulWidget {
   const LikedJigsScreen({
     super.key,
     required this.likedItems,
-    required this.jigsNotifier, // ✅ 전체 목록 동기화용
+    required this.jigsNotifier,
   });
 
   final List<JigItemData> likedItems;
@@ -242,7 +256,10 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
   late final ValueNotifier<List<JigItemData>> _likedVN =
   ValueNotifier<List<JigItemData>>(List<JigItemData>.from(widget.likedItems));
 
-  JigItemData _withPreservedLike({required JigItemData edited, required JigItemData old}) =>
+  JigItemData _withPreservedLike({
+    required JigItemData edited,
+    required JigItemData old,
+  }) =>
       edited.copyWith(likes: old.likes, isLiked: old.isLiked);
 
   void _openEdit(BuildContext context, JigItemData item, int index) {
@@ -270,10 +287,9 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
             // 우선 참조 동일성으로 찾고, 없으면 타이틀/위치로 매칭
             int gi = all.indexOf(item);
             if (gi == -1) {
-              gi = all.indexWhere((e) =>
-              e.title == item.title &&
-                  e.location == item.location &&
-                  e.registrant == item.registrant);
+              gi = all.indexWhere(
+                    (e) => e.title == item.title && e.location == item.location && e.registrant == item.registrant,
+              );
             }
             if (gi != -1) {
               all[gi] = _withPreservedLike(edited: newJig, old: all[gi]);
