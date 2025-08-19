@@ -1,11 +1,12 @@
+// lib/map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../../widgets/jig_item_data.dart';
 import '../../widgets/jig_item.dart';
 import '../../widgets/jig_form_bottom_sheet.dart';
-import '../../state/jigs_store.dart'; // ✅ 전역 저장소
+import '../../data/jigs_store.dart'; // ✅ 전역 스토어
 
-Color _colorForUtil({ required int used, required int max, double alpha = 0.35, }) {
+Color _colorForUtil({required int used, required int max, double alpha = 0.35}) {
   final m = (max <= 0) ? 1 : max;
   final u = (used.clamp(0, m)) / m;
   if (u <= 0) return Colors.green.withOpacity(alpha);
@@ -17,13 +18,26 @@ Color _colorForUtil({ required int used, required int max, double alpha = 0.35, 
   return base.withOpacity(alpha);
 }
 
+/// 배광시험동 2층 – R1~R24 / L1~L20 (각 슬롯 1~5층)
 class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   final VoidCallback onBack;
+
+  /// (선택) 외부 주입; 기본은 JigsStore.notifier 사용
   final ValueListenable<List<JigItemData>>? jigsListenable;
+
+  /// 최초 진입 스냅샷(선택)
   final List<JigItemData> allItems;
+
+  /// 등록 시 상위로 전달(선택)
   final void Function(JigItemData newItem)? onCreateJig;
+
+  /// 층 버튼 색상 상한
   final int maxCapacityPerFloor;
+
+  /// (옵션) 지그 1개의 가중치 계산. 미제공 시 size -> 1/3/5
   final int Function(JigItemData item)? weightOfItem;
+
+  /// 🔧 층 버튼/레이아웃 커스터마이즈
   final double floorBtnWidthFrac;
   final double floorBtnHeightFracOfFifth;
   final double floorBtnGap;
@@ -54,23 +68,27 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
 
 class _JinryangBaekwangTestBuildingMapState
     extends State<JinryangBaekwangTestBuildingMap> {
+  // ===== Layout =====
   static const double _kBtnW = 80;
   static const double _kBtnH = 160;
   static const double _kGapV = 8;
   static const double _kColGap = 70;
   static double get _rowWidth => _kBtnW * 2 + _kColGap;
 
+  // ===== 최근 본 위치(FAB 프리필) =====
   String? _lastSlot;   // Ln / Rn
   String? _lastFloor;  // 1층~5층
 
-  List<JigItemData> get _items =>
-      widget.jigsListenable?.value ?? JigsStore.items;
+  // ===== 전역/외부 주입 리스너 =====
+  late ValueListenable<List<JigItemData>> _activeListenable;
+  List<JigItemData> get _items => _activeListenable.value;
 
   @override
   void initState() {
     super.initState();
-    widget.jigsListenable?.addListener(_onItemsChanged);
-    JigsStore.notifier.addListener(_onItemsChanged);
+    _activeListenable = widget.jigsListenable ?? JigsStore.notifier;
+    _activeListenable.addListener(_onItemsChanged);
+
     if (JigsStore.items.isEmpty && widget.allItems.isNotEmpty) {
       JigsStore.setInitial(widget.allItems);
     }
@@ -79,22 +97,26 @@ class _JinryangBaekwangTestBuildingMapState
   @override
   void didUpdateWidget(covariant JinryangBaekwangTestBuildingMap oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.jigsListenable != widget.jigsListenable) {
-      oldWidget.jigsListenable?.removeListener(_onItemsChanged);
-      widget.jigsListenable?.addListener(_onItemsChanged);
+    final next = widget.jigsListenable ?? JigsStore.notifier;
+    if (!identical(next, _activeListenable)) {
+      _activeListenable.removeListener(_onItemsChanged);
+      _activeListenable = next;
+      _activeListenable.addListener(_onItemsChanged);
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
-    widget.jigsListenable?.removeListener(_onItemsChanged);
-    JigsStore.notifier.removeListener(_onItemsChanged);
+    _activeListenable.removeListener(_onItemsChanged);
     super.dispose();
   }
 
-  void _onItemsChanged() { if (mounted) setState(() {}); }
+  void _onItemsChanged() {
+    if (mounted) setState(() {}); // 포화도/리스트 갱신
+  }
 
-  // -------- util / parsing --------
+  // ===== Util =====
   int _weight(JigItemData it) {
     if (widget.weightOfItem != null) return widget.weightOfItem!(it);
     switch ((it.size ?? '').replaceAll(' ', '')) {
@@ -103,49 +125,107 @@ class _JinryangBaekwangTestBuildingMapState
       default: return 1;
     }
   }
-  String _norm(String s) => s.replaceAll(RegExp(r'\s+'), '').trim();
-  List<String> _parts(String loc) => loc.split('/').map((e) => e.trim()).toList();
-  String _parent(String loc) => _parts(loc).first.trim();
-  String? _slot(String loc) { final p = _parts(loc); return p.length > 1 ? p[1] : null; }
-  String? _floor(String loc) {
-    final p = _parts(loc); if (p.length > 2) {
-      final m = RegExp(r'(\d)').firstMatch(p[2]); if (m != null) return '${m.group(1)}층';
-    } return null;
+
+  String _parent(String loc) => loc.split('/').first.trim();
+
+  String? _slot(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    return p.length > 1 ? p[1] : null; // Rn/Ln
   }
-  bool _isBaek2F(String loc) => _norm(_parent(loc)) == _norm('배광시험동 2층');
+
+  String? _floor(String loc) {
+    final p = loc.split('/').map((e) => e.trim()).toList();
+    if (p.length > 2) {
+      final m = RegExp(r'(\d)').firstMatch(p[2]);
+      if (m != null) return '${m.group(1)}층';
+    }
+    return null;
+  }
 
   List<JigItemData> _itemsFor(String slot, String floor) {
-    final ns = _norm(slot), nf = _norm(floor);
     return _items.where((it) {
-      final loc = it.location;
-      if (!_isBaek2F(loc)) return false;
-      return _norm(_slot(loc) ?? '') == ns && _norm(_floor(loc) ?? '') == nf;
+      if (_parent(it.location) != '배광시험동 2층') return false;
+      return _slot(it.location) == slot && _floor(it.location) == floor;
     }).toList();
   }
+
   int _usedFor(String slot, String floor) =>
       _itemsFor(slot, floor).fold<int>(0, (s, it) => s + _weight(it));
+
   int _usedTotalForSlot(String slot) {
-    const floors = ['1층','2층','3층','4층','5층'];
-    var sum = 0; for (final f in floors) { sum += _usedFor(slot, f); } return sum;
+    const floors = ['1층', '2층', '3층', '4층', '5층'];
+    var sum = 0;
+    for (final f in floors) { sum += _usedFor(slot, f); }
+    return sum;
   }
+
   Color _slotColor(String slot) {
     final used = _usedTotalForSlot(slot);
-    final max = widget.maxCapacityPerFloor * 5;
+    final max = widget.maxCapacityPerFloor * 5; // 5층 합계 기준
     return _colorForUtil(used: used, max: max, alpha: 0.8);
   }
 
-  // -------- 등록 처리 (전역 + 외부콜백) --------
-  void _handleCreateJig(JigItemData newJig) {
-    widget.onCreateJig?.call(newJig);
-    JigsStore.add(newJig); // ✅ 전역 반영
-    _lastSlot  = _slot(newJig.location) ?? _lastSlot;
-    _lastFloor = _floor(newJig.location) ?? _lastFloor;
+  // ---------- [중요] 전역+외부 동시 갱신 유틸 ----------
+  void _addEverywhere(JigItemData newJig) {
+    final store = JigsStore.notifier;
+    store.value = [newJig, ...store.value];
+    if (_activeListenable is ValueNotifier<List<JigItemData>> &&
+        !identical(_activeListenable, store)) {
+      final vn = _activeListenable as ValueNotifier<List<JigItemData>>;
+      vn.value = [newJig, ...vn.value];
+    }
   }
 
+  void _replaceEverywhere(JigItemData oldItem, JigItemData updated) {
+    void replaceIn(ValueNotifier<List<JigItemData>> vn) {
+      final list = List<JigItemData>.from(vn.value);
+      int i = list.indexOf(oldItem);
+      if (i == -1) {
+        i = list.indexWhere((e) =>
+        e.title == oldItem.title &&
+            e.location == oldItem.location &&
+            e.registrant == oldItem.registrant);
+      }
+      if (i != -1) {
+        final keep = list[i];
+        list[i] = updated.copyWith(likes: keep.likes, isLiked: keep.isLiked);
+        vn.value = list;
+      }
+    }
+
+    final store = JigsStore.notifier;
+    replaceIn(store);
+    if (_activeListenable is ValueNotifier<List<JigItemData>> &&
+        !identical(_activeListenable, store)) {
+      replaceIn(_activeListenable as ValueNotifier<List<JigItemData>>);
+    }
+  }
+
+  void _openEdit(BuildContext context, JigItemData original) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => JigFormBottomSheet(
+        editItem: original,
+        onSubmit: (edited) {
+          _replaceEverywhere(original, edited);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+  // -------------------------------------------------------
+
+  // ===== 등록 폼 열기 =====
   void _openAddJig({String? slot, String? floor}) {
     String loc = '배광시험동 2층';
     if (slot != null && slot.isNotEmpty) loc += ' / $slot';
     if (floor != null && floor.isNotEmpty) loc += ' / $floor';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -155,28 +235,39 @@ class _JinryangBaekwangTestBuildingMapState
       ),
       builder: (_) => JigFormBottomSheet(
         initialLocation: loc,
-        onSubmit: _handleCreateJig, // ✅ 전역 저장소에 추가
+        onSubmit: (newJig) {
+          _addEverywhere(newJig);           // ✅ 전역 + 이 화면 동시 반영
+          widget.onCreateJig?.call(newJig); // (선택) 외부 알림
+        },
       ),
     );
   }
 
-  // -------- UI --------
+  // ===== UI: 버튼들 =====
   Widget _buildShelfColumn(List<String> labels, BuildContext context) {
     return Column(
       children: List.generate(labels.length, (i) {
         final label = labels[i];
         final capColor = _slotColor(label);
         return SizedBox(
-          width: _kBtnW, height: _kBtnH,
+          width: _kBtnW,
+          height: _kBtnH,
           child: Padding(
             padding: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : _kGapV),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: capColor, foregroundColor: Colors.black,
-                shape: const RoundedRectangleBorder(side: BorderSide(color: Colors.black), borderRadius: BorderRadius.zero),
+                backgroundColor: capColor,
+                foregroundColor: Colors.black,
+                shape: const RoundedRectangleBorder(
+                  side: BorderSide(color: Colors.black),
+                  borderRadius: BorderRadius.zero,
+                ),
                 padding: EdgeInsets.zero, elevation: 0, shadowColor: Colors.transparent,
               ),
-              onPressed: () { _lastSlot = label; _openSlotDialog(context, label); },
+              onPressed: () {
+                _lastSlot = label;
+                _openSlotDialog(context, label);
+              },
               child: Text(label),
             ),
           ),
@@ -190,109 +281,137 @@ class _JinryangBaekwangTestBuildingMapState
     required List<String> leftLabels,
     required BuildContext context,
   }) {
-    final rCount = rightLabels.length, lCount = leftLabels.length;
+    final rCount = rightLabels.length;
+    final lCount = leftLabels.length;
     final maxCount = rCount > lCount ? rCount : lCount;
     final rowHeight = maxCount * _kBtnH + (maxCount - 1) * _kGapV;
-    final corridorLeft = _kBtnW, corridorWidth = _kColGap;
-    const yellowLineWidth = 5.0, yellowEdgeInset = 0.0;
+
+    final corridorLeft = _kBtnW;
+    final corridorWidth = _kColGap;
+
+    const yellowLineWidth = 5.0;
+    const yellowEdgeInset = 0.0;
 
     return Center(
       child: SizedBox(
-        width: _rowWidth, height: rowHeight,
-        child: Stack(children: [
-          Positioned.fill(child: Container(
-            decoration: BoxDecoration(border: Border.all(color: Colors.black, width: 5), color: Colors.green.shade800),
-          )),
-          Positioned(
-            left: corridorLeft, top: 0, width: corridorWidth, height: rowHeight,
-            child: Stack(children: [
-              Positioned.fill(child: Container(color: Colors.green.shade800)),
-              Positioned(left: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
-              Positioned(right: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
-            ]),
-          ),
-          Positioned(left: 0, top: 0, child: _buildShelfColumn(rightLabels, context)),
-          Positioned(right: 0, top: 0, child: _buildShelfColumn(leftLabels, context)),
-        ]),
+        width: _rowWidth,
+        height: rowHeight,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.black, width: 5),
+                  color: Colors.green.shade800,
+                ),
+              ),
+            ),
+            Positioned(
+              left: corridorLeft,
+              top: 0,
+              width: corridorWidth,
+              height: rowHeight,
+              child: Stack(
+                children: [
+                  Positioned.fill(child: Container(color: Colors.green.shade800)),
+                  Positioned(left: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
+                  Positioned(right: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
+                ],
+              ),
+            ),
+            Positioned(left: 0, top: 0, child: _buildShelfColumn(rightLabels, context)),
+            Positioned(right: 0, top: 0, child: _buildShelfColumn(leftLabels, context)),
+          ],
+        ),
       ),
     );
   }
 
+  // ====== 다이얼로그(선반 → 층 → 상세 전환) ======
   Future<void> _openSlotDialog(BuildContext context, String slot) async {
     await showDialog<void>(
-      context: context, barrierDismissible: true,
+      context: context,
+      barrierDismissible: true,
       builder: (_) {
         String? selectedFloor;
         return StatefulBuilder(
-          builder: (dctx, setSB) => AlertDialog(
-            titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            title: Row(children: [
-              Expanded(child: Text('$slot 슬롯', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
-              if (selectedFloor != null)
-                Padding(padding: const EdgeInsets.only(left: 8),
-                    child: Text(selectedFloor!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
-            ]),
-            content: SizedBox(
-              width: 720, height: 520,
-              child: BaekwangShelfViewer5Floors(
-                slotLabel: slot, maxCapacity: widget.maxCapacityPerFloor,
-                selectedFloor: selectedFloor,
-                onSelectFloor: (floor) { setSB(() => selectedFloor = floor); _lastSlot = slot; _lastFloor = floor; },
-                onBackToFloors: () => setSB(() => selectedFloor = null),
-                capacityForFloor: (floorLabel) => _usedFor(slot, floorLabel),
-                detailsBuilder: (slotLabel, floorLabel, onBack) {
-                  final items = _itemsFor(slotLabel, floorLabel);
-                  return _BaekJigDetailPanel(
-                    child: items.isEmpty
-                        ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
-                        : ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) {
-                        final it = items[i];
-                        return JigItem(
-                          image: it.image,
-                          title: it.title,
-                          location: it.location,
-                          price: it.description,
-                          registrant: it.registrant,
-                          likes: it.likes,
-                          isLiked: it.isLiked,
-                          onLikePressed: () {},
-                          storageDate: it.storageDate,
-                          disposalDate: it.disposalDate,
-                          size: it.size,
-                          jigHeight: it.jigHeight,
-                        );
-                      },
-                    ),
-                    onBack: onBack,
-                  );
-                },
-                floorBtnWidthFrac: widget.floorBtnWidthFrac,
-                floorBtnHeightFracOfFifth: widget.floorBtnHeightFracOfFifth,
-                floorBtnGap: widget.floorBtnGap,
-                floorBtnRadius: widget.floorBtnRadius,
-                overlayPadding: widget.overlayPadding,
-                floorButtonsYOffsetPx: widget.floorButtonsYOffsetPx,
+          builder: (dctx, setSB) {
+            return AlertDialog(
+              titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+              title: Row(
+                children: [
+                  Expanded(child: Text('$slot 슬롯', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                  if (selectedFloor != null)
+                    Padding(padding: const EdgeInsets.only(left: 8), child: Text(selectedFloor!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                ],
               ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
-                child: TextButton(
-                  onPressed: () { Navigator.pop(dctx); _openAddJig(slot: slot, floor: selectedFloor); },
-                  child: const Text('+ 지그 등록'),
+              content: SizedBox(
+                width: 720, height: 520,
+                child: BaekwangShelfViewer5Floors(
+                  slotLabel: slot,
+                  maxCapacity: widget.maxCapacityPerFloor,
+                  selectedFloor: selectedFloor,
+                  onSelectFloor: (floor) { setSB(() => selectedFloor = floor); _lastSlot = slot; _lastFloor = floor; },
+                  onBackToFloors: () => setSB(() => selectedFloor = null),
+                  capacityForFloor: (floorLabel) => _usedFor(slot, floorLabel),
+                  detailsBuilder: (slotLabel, floorLabel, onBack) {
+                    final items = _itemsFor(slotLabel, floorLabel);
+                    return _BaekJigDetailPanel(
+                      child: items.isEmpty
+                          ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
+                          : ListView.separated(
+                        padding: const EdgeInsets.all(12),
+                        itemCount: items.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) {
+                          final it = items[i];
+                          return Stack(
+                            children: [
+                              JigItem(
+                                image: it.image, title: it.title, location: it.location, price: it.description,
+                                registrant: it.registrant, likes: it.likes, isLiked: it.isLiked,
+                                onLikePressed: () {}, storageDate: it.storageDate, disposalDate: it.disposalDate,
+                                size: it.size, jigHeight: it.jigHeight,
+                              ),
+                              Positioned(
+                                top: 0, right: 0,
+                                child: IconButton(
+                                  tooltip: '수정',
+                                  icon: const Icon(Icons.edit, color: Colors.black),
+                                  onPressed: () => _openEdit(context, it), // ✅ 수정
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      onBack: onBack,
+                    );
+                  },
+                  floorBtnWidthFrac: widget.floorBtnWidthFrac,
+                  floorBtnHeightFracOfFifth: widget.floorBtnHeightFracOfFifth,
+                  floorBtnGap: widget.floorBtnGap,
+                  floorBtnRadius: widget.floorBtnRadius,
+                  overlayPadding: widget.overlayPadding,
+                  floorButtonsYOffsetPx: widget.floorButtonsYOffsetPx,
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
-                child: TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('돌아가기')),
-              ),
-            ],
-          ),
+              actions: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
+                  child: TextButton(
+                    onPressed: () { Navigator.pop(dctx); _openAddJig(slot: slot, floor: selectedFloor); },
+                    child: const Text('+ 지그 등록'),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
+                  child: TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('돌아가기')),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -310,35 +429,41 @@ class _JinryangBaekwangTestBuildingMapState
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Center(
-              child: Container(
-                width: _rowWidth + 120,
-                decoration: BoxDecoration(color: const Color(0xFFF2DEBC), borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: Column(children: [
-                  const Column(children: [
-                    Text('IN', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
-                    Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
-                    SizedBox(height: 20),
-                  ]),
-                  _buildShelfRow(rightLabels: rightTop, leftLabels: leftTop, context: context),
-                  const SizedBox(height: 50),
-                  _buildShelfRow(rightLabels: rightBottom, leftLabels: leftBottom, context: context),
-                ]),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Center(
+                child: Container(
+                  width: _rowWidth + 120,
+                  decoration: BoxDecoration(color: const Color(0xFFF2DEBC), borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  child: Column(
+                    children: [
+                      const Column(children: [
+                        Text('IN', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
+                        Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
+                        SizedBox(height: 20),
+                      ]),
+                      _buildShelfRow(rightLabels: rightTop, leftLabels: leftTop, context: context),
+                      const SizedBox(height: 50),
+                      _buildShelfRow(rightLabels: rightBottom, leftLabels: leftBottom, context: context),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
-          Positioned(
-            top: 12, left: 12,
-            child: IconButton.filledTonal(
-              onPressed: widget.onBack, icon: const Icon(Icons.arrow_back),
-              style: IconButton.styleFrom(padding: const EdgeInsets.all(10)), tooltip: '뒤로',
+            Positioned(
+              top: 12, left: 12,
+              child: IconButton.filledTonal(
+                onPressed: widget.onBack,
+                icon: const Icon(Icons.arrow_back),
+                style: IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+                tooltip: '뒤로',
+              ),
             ),
-          ),
-        ]),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openAddJig(slot: _lastSlot, floor: _lastFloor),
@@ -348,6 +473,7 @@ class _JinryangBaekwangTestBuildingMapState
   }
 }
 
+/// 배광 슬롯 뷰어(5층)
 class BaekwangShelfViewer5Floors extends StatelessWidget {
   final String slotLabel;
   final int maxCapacity;
@@ -356,10 +482,7 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
   final VoidCallback onBackToFloors;
   final int Function(String floorLabel) capacityForFloor;
   final Widget Function(String slotLabel, String floorLabel, VoidCallback onBack) detailsBuilder;
-  final double floorBtnWidthFrac;
-  final double floorBtnHeightFracOfFifth;
-  final double floorBtnGap;
-  final double floorBtnRadius;
+  final double floorBtnWidthFrac, floorBtnHeightFracOfFifth, floorBtnGap, floorBtnRadius;
   final EdgeInsets overlayPadding;
   final double floorButtonsYOffsetPx;
 
@@ -385,8 +508,7 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
     final showDetails = selectedFloor != null;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
-      child: showDetails ? detailsBuilder(slotLabel, selectedFloor!, onBackToFloors)
-          : _buildFloorsOverlay(context),
+      child: showDetails ? detailsBuilder(slotLabel, selectedFloor!, onBackToFloors) : _buildFloorsOverlay(context),
     );
   }
 
@@ -398,8 +520,10 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
         final W = c.maxWidth, H = c.maxHeight;
         final innerW = (W - pad.horizontal).clamp(0.0, double.infinity);
         final innerH = (H - pad.vertical).clamp(0.0, double.infinity);
+
         final totalGap = floorBtnGap * 4.0;
         final stripH = (innerH - totalGap) / 5.6;
+
         final btnH = stripH * floorBtnHeightFracOfFifth;
         final btnW = innerW * floorBtnWidthFrac;
         final left = pad.left + (innerW - btnW) / 2;
@@ -415,29 +539,31 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
         ];
 
         for (int i = 0; i < 5; i++) {
-          final floorLabel = '${5 - i}층';
+          final floorLabel = '${5 - i}층'; // 위=5층, 아래=1층
           final used = capacityForFloor(floorLabel);
           final top = pad.top + floorButtonsYOffsetPx + i * (stripH + floorBtnGap) + inStripOffset;
 
-          children.add(Positioned(
-            left: left, top: top, width: btnW, height: 58,
-            child: Material(
-              color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
-              borderRadius: BorderRadius.circular(floorBtnRadius),
-              child: InkWell(
+          children.add(
+            Positioned(
+              left: left, top: top, width: btnW, height: 58,
+              child: Material(
+                color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
                 borderRadius: BorderRadius.circular(floorBtnRadius),
-                onTap: () => onSelectFloor(floorLabel),
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-                    child: Text('$floorLabel  (사용:$used/$maxCapacity)',
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(floorBtnRadius),
+                  onTap: () => onSelectFloor(floorLabel),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
+                      child: Text('$floorLabel  (사용:$used/$maxCapacity)',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                    ),
                   ),
                 ),
               ),
             ),
-          ));
+          );
         }
 
         return Stack(children: children);

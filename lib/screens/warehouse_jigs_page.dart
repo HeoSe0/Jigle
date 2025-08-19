@@ -1,3 +1,4 @@
+// lib/screens/warehouse_jigs_page.dart
 import 'package:flutter/material.dart';
 
 import '../widgets/jig_item.dart';
@@ -8,10 +9,13 @@ import '../widgets/jig_item_data.dart';
 import '../map_page/jinryang_maps/jinryang_b_dong_map.dart';
 import '../map_page/jinryang_maps/jinryang_baekwang_test_building_map.dart';
 
+// 🔴 전역 스토어 (단일 소스)
+import '../data/jigs_store.dart';
+
 class WarehouseJigsPage extends StatefulWidget {
   const WarehouseJigsPage({
     super.key,
-    required this.jigsNotifier,
+    required this.jigsNotifier,       // (주입은 받지만 표시엔 사용 안함: 전역 스토어만 구독)
     required this.likedItemsNotifier,
   });
 
@@ -51,7 +55,6 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     if (_openingMap) return;
     _openingMap = true;
 
-    // 로딩
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -81,13 +84,14 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
   @override
   void initState() {
     super.initState();
-    widget.jigsNotifier.addListener(_onJigsChanged);
+    // 🔴 전역 스토어만 구독
+    JigsStore.notifier.addListener(_onJigsChanged);
     _ensureSelectedLocation();
   }
 
   @override
   void dispose() {
-    widget.jigsNotifier.removeListener(_onJigsChanged);
+    JigsStore.notifier.removeListener(_onJigsChanged);
     super.dispose();
   }
 
@@ -105,7 +109,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
   }
 
   List<String> get _topLocations {
-    final items = widget.jigsNotifier.value;
+    final items = JigsStore.notifier.value;
     final set = <String>{for (final it in items) _parentOf(it.location)};
     final list = set.toList()..sort();
     // 우선순위 반영
@@ -141,7 +145,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       d ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   List<JigItemData> get _filtered {
-    final all = widget.jigsNotifier.value;
+    final all = JigsStore.notifier.value;
     final parent = _selectedLocation;
     if (parent == null) return const [];
 
@@ -194,6 +198,10 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
 
   // ------- 추가/수정/삭제/좋아요 -------
   void _showAddOrEditJigDialog({JigItemData? editItem, int? editIndex}) {
+    // 현재 선택 장소로 프리필
+    final initialLoc = editItem?.location ??
+        (_selectedLocation != null ? '${_selectedLocation!} / ' : '');
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -203,20 +211,25 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       ),
       builder: (_) => JigFormBottomSheet(
         editItem: editItem,
+        initialLocation: initialLoc,
         onSubmit: (newJig) {
-          final list = List<JigItemData>.from(widget.jigsNotifier.value);
+          final list = List<JigItemData>.from(JigsStore.notifier.value);
           setState(() {
-            if (editIndex != null) {
-              final old = list[editIndex];
-              final updated = _withPreservedLike(edited: newJig, old: old);
-              list[editIndex] = updated;
-              _replaceInLiked(old, updated);
-              _selectedLocation = _parentOf(updated.location);
+            if (editIndex != null && editItem != null) {
+              final gi = list.indexOf(editItem);
+              if (gi != -1) {
+                final updated =
+                _withPreservedLike(edited: newJig, old: list[gi]);
+                list[gi] = updated;
+                _replaceInLiked(editItem, updated);
+                _selectedLocation = _parentOf(updated.location);
+              }
             } else {
               list.insert(0, newJig);
               _selectedLocation = _parentOf(newJig.location);
             }
-            widget.jigsNotifier.value = list;
+            // 🔴 전역 스토어 교체 → 모든 화면 동기화
+            JigsStore.notifier.value = list;
           });
         },
       ),
@@ -234,16 +247,20 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('아니오')),
           TextButton(
             onPressed: () {
-              final list = List<JigItemData>.from(widget.jigsNotifier.value);
+              final list = List<JigItemData>.from(JigsStore.notifier.value);
               setState(() {
-                final removed = list.removeAt(index);
-                widget.jigsNotifier.value = list;
+                // 인덱스는 필터링된 리스트 기준이라 안전하게 원본에서 찾아 삭제
+                final gi = list.indexOf(item);
+                if (gi != -1) {
+                  final removed = list.removeAt(gi);
+                  JigsStore.notifier.value = list;
 
-                final liked =
-                List<JigItemData>.from(widget.likedItemsNotifier.value);
-                if (liked.remove(removed)) {
-                  widget.likedItemsNotifier.value =
-                  List<JigItemData>.from(liked);
+                  final liked =
+                  List<JigItemData>.from(widget.likedItemsNotifier.value);
+                  if (liked.remove(removed)) {
+                    widget.likedItemsNotifier.value =
+                    List<JigItemData>.from(liked);
+                  }
                 }
               });
               Navigator.pop(ctx);
@@ -314,7 +331,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
 
   // ====== 지도 열기 (프리캐시 + 로딩) ======
   void _openBDongMap() {
-    final items = widget.jigsNotifier.value;
+    final items = JigsStore.notifier.value;
     final focus = _inferInitialFocusForBDong(items);
 
     _openMapSafely(
@@ -326,11 +343,12 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       ],
       buildPage: () => JinryangBDongMap(
         onBack: () => Navigator.pop(context),
-        // 실시간 포화도 반영
-        jigsListenable: widget.jigsNotifier,
-        allItems: items, // 스냅샷(백업)
 
-        // 최근 항목 위치로 자동 포커스
+        // ✅ 실시간 연동: 전역 스토어 단일 소스
+        jigsListenable: JigsStore.notifier,
+        allItems: items,
+
+        // (선택) 자동 포커스
         initialFZone: focus.fzone,
         initialShelf: focus.shelf,
         initialFloor: focus.floor,
@@ -339,25 +357,29 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
         maxCapacityF: 10,
         weightOfItem: (JigItemData it) => _weightForSize(it.size),
 
-        // 지도에서 '+ 지그 등록' → 상위 리스트 갱신
-        onCreateJig: (newJig) {
-          final list = List<JigItemData>.from(widget.jigsNotifier.value);
-          list.insert(0, newJig);
-          widget.jigsNotifier.value = list;
-        },
+        // ✅ 지도 내부 '+ 지그 등록' → 전역 갱신
+        onCreateJig: (newJig) => JigsStore.add(newJig),
       ),
     );
   }
 
   void _openBaekwangMap() {
-    final items = widget.jigsNotifier.value;
+    final items = JigsStore.notifier.value;
+
     _openMapSafely(
       assetsToPrecache: const ['assets/shelf_empty.png'],
       buildPage: () => JinryangBaekwangTestBuildingMap(
         onBack: () => Navigator.pop(context),
+
+        // ✅ 실시간 연동: 전역 스토어 단일 소스
+        jigsListenable: JigsStore.notifier,
         allItems: items,
+
         maxCapacityPerFloor: 10,
         weightOfItem: (JigItemData it) => _weightForSize(it.size),
+
+        // ✅ 지도 내부 '+ 지그 등록' → 전역 갱신
+        onCreateJig: (newJig) => JigsStore.add(newJig),
       ),
     );
   }
@@ -452,8 +474,9 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
               itemCount: items.length,
               itemBuilder: (_, index) {
                 final item = items[index];
-                final globalIndex = widget.jigsNotifier.value.indexOf(item);
-                final effectiveIndex = globalIndex >= 0 ? globalIndex : index;
+                // 전역 리스트에서의 실제 인덱스 (수정/삭제용)
+                final originIndex = JigsStore.notifier.value.indexOf(item);
+                final effectiveIndex = originIndex >= 0 ? originIndex : index;
 
                 return Stack(
                   children: [
@@ -468,8 +491,6 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                       onLikePressed: () => _toggleLike(item),
                       storageDate: item.storageDate,
                       disposalDate: item.disposalDate,
-
-                      // ★ 추가: 카드에서 사이즈/높이 배지 표시
                       size: item.size,
                       jigHeight: item.jigHeight,
                     ),

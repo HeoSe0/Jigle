@@ -41,7 +41,7 @@ class MyJigsPage extends StatelessWidget {
                   const _MenuSpec('나의 지그', MyJigScreen()),
                   const _MenuSpec('나의 샘플', MySampleScreen()),
                   // ✅ WarehouseScreen에 전체 지그 전달
-                  _MenuSpec('창고 현황', WarehouseScreen(allItems: jigsNotifier.value)),
+                  _MenuSpec('창고 현황', WarehouseScreen(itemsListenable: jigsNotifier)), // ✅ 여기!
                   const _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
