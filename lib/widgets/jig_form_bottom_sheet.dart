@@ -149,9 +149,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           baekFloor = null;
         }
       } else {
-        location = _locations.contains(incomingLocation)
-            ? incomingLocation
-            : _locations.first;
+        location =
+        _locations.contains(incomingLocation) ? incomingLocation : _locations.first;
       }
     } else {
       location = _locations.first;
@@ -183,8 +182,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       return;
     }
 
-    final files =
-    await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85);
+    final files = await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85);
     if (!mounted || files.isEmpty) return;
 
     final adding = files.take(remain);
@@ -521,8 +519,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return SizedBox(
       height: _CHIP_HEIGHT_BDONG,
       child: ChoiceChip(
-        label: Text(label,
-            style: TextStyle(color: selected ? Colors.white : Colors.black)),
+        label:
+        Text(label, style: TextStyle(color: selected ? Colors.white : Colors.black)),
         selected: selected,
         selectedColor: Colors.blue,
         backgroundColor: Colors.white,
@@ -556,8 +554,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           backgroundColor: selected ? Colors.blue : Colors.white,
           foregroundColor: selected ? Colors.white : Colors.black,
           side: BorderSide(color: selected ? Colors.blue : Colors.black12),
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         onPressed: onTap,
@@ -573,38 +570,39 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
     final Widget heroPreview = (_images.isNotEmpty)
         ? Image(image: _providerFor(_images[_thumbIndex]), fit: BoxFit.cover)
-        : (widget.editItem != null &&
-        widget.editItem!.image.trim().isNotEmpty)
+        : (widget.editItem != null && widget.editItem!.image.trim().isNotEmpty)
         ? Image(image: _providerFor(widget.editItem!.image), fit: BoxFit.cover)
         : const Center(
-        child: Text('썸네일 미리보기 없음',
-            style: TextStyle(color: Colors.black54)));
+        child:
+        Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: Material(
         color: Colors.white,
-        child: Padding(
-          // 키보드가 올라올 때만 하단 여백 추가
-          padding: EdgeInsets.only(bottom: keyboard),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomSafe),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 상단 툴바 영역 (카메라 아이콘 제거 + SafeArea로 상단 겹침 방지)
-                SafeArea(
-                  top: true,
-                  bottom: false,
-                  child: Row(
+
+        /// ✅ 상단 상태바·노치만큼 안전 여백을 확보
+        child: SafeArea(
+          top: true, bottom: false, left: false, right: false,
+
+          child: Padding(
+            // 키보드가 올라올 때만 하단 여백 추가
+            padding: EdgeInsets.only(bottom: keyboard, top: 8),
+
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomSafe),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 상단 툴바(이제 별도 SafeArea 필요 없음)
+                  Row(
                     children: [
                       // 뒤로가기: 왼쪽으로 붙이기
                       IconButton(
                         tooltip: '뒤로가기',
                         onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new,
-                            color: Colors.black),
+                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
                         visualDensity: VisualDensity.compact,
                         constraints:
                         const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -645,499 +643,500 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       Text('${_images.length}/$_maxImages'),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // 썸네일 프리뷰
-                Container(
-                  width: double.infinity,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child:
-                  ClipRRect(borderRadius: BorderRadius.circular(10), child: heroPreview),
-                ),
-
-                // 썸네일 그리드
-                if (_images.isNotEmpty) ...[
-                  const SizedBox(height: 10),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _images.length,
-                    gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 1,
+                  // 썸네일 프리뷰
+                  Container(
+                    width: double.infinity,
+                    height: 160,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    itemBuilder: (context, i) {
-                      final selected = i == _thumbIndex;
-                      return Stack(
-                        children: [
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: InkWell(
-                                onTap: () => _setThumb(i),
-                                child: Image(
-                                  image: _providerFor(_images[i]),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 6,
-                            top: 6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: selected
-                                    ? const Color(0xFFFFE066)
-                                    : Colors.black45,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                '대표',
-                                style: TextStyle(
-                                  color: selected ? Colors.black : Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            left: 6,
-                            top: 6,
-                            child: InkWell(
-                              onTap: () => _removeAt(i),
-                              child: const CircleAvatar(
-                                radius: 12,
-                                backgroundColor: Colors.black54,
-                                child: Icon(Icons.close,
-                                    size: 14, color: Colors.white),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                    child: ClipRRect(
+                        borderRadius: BorderRadius.circular(10), child: heroPreview),
                   ),
-                ],
 
-                const SizedBox(height: 10),
-
-                // 제목 (필수, 에러 하이라이트)
-                TextField(
-                  controller: titleController,
-                  focusNode: _titleFocus,
-                  decoration: InputDecoration(
-                    labelText: '제목',
-                    errorText: _titleError ? '제목은 필수입니다.' : null,
-                    filled: _titleError,
-                    fillColor: Colors.red.withOpacity(0.06),
-                    border: const OutlineInputBorder(),
-                    enabledBorder: const OutlineInputBorder(),
-                    focusedBorder: OutlineInputBorder(
-                      borderSide: BorderSide(
-                        color: _titleError ? Colors.red : Colors.blue,
-                        width: _titleError ? 2 : 1.5,
+                  // 썸네일 그리드
+                  if (_images.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _images.length,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 8,
+                        crossAxisSpacing: 8,
+                        childAspectRatio: 1,
                       ),
-                    ),
-                    errorBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
-                    ),
-                    focusedErrorBorder: const OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red, width: 2),
-                    ),
-                  ),
-                  onChanged: (v) {
-                    if (_titleError && v.trim().isNotEmpty) {
-                      setState(() => _titleError = false);
-                    }
-                  },
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(labelText: '설명'),
-                  maxLines: 1,
-                ),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: registrantController,
-                  decoration: const InputDecoration(labelText: '등록자'),
-                  maxLines: 1,
-                ),
-
-                const SizedBox(height: 16),
-                const Text("지그 사이즈",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children:
-                  [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge]
-                      .map((s) {
-                    final isSelected = jigSize == s;
-                    final label = _sizeLabels[s] ?? s;
-                    return _chip44(
-                      label: label,
-                      selected: isSelected,
-                      onSelected: (_) => setState(() => jigSize = s),
-                    );
-                  }).toList(),
-                ),
-
-                // 지그 높이: 모든 옵션 노출 + (필수 미선택: 빨간 에러) / (규칙 위반: 노랑 경고)
-                const SizedBox(height: 16),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text("지그 높이",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(width: 8),
-
-                    if (_heightError)
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: _errorPill('지그 높이를 선택해주세요.'),
-                        ),
-                      )
-                    else if (!_isHeightSelectionAllowed)
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF3CD),
-                              border:
-                              Border.all(color: const Color(0xFFEEA236)),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.warning_amber_rounded,
-                                    size: 16, color: Color(0xFF8A6D3B)),
-                                SizedBox(width: 6),
-                                Flexible(
-                                  child: Text(
-                                    '지그 높이 때문에 보관이 어려울 수 있습니다.',
-                                    style: TextStyle(
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF8A6D3B)),
-                                    overflow: TextOverflow.ellipsis,
+                      itemBuilder: (context, i) {
+                        final selected = i == _thumbIndex;
+                        return Stack(
+                          children: [
+                            Positioned.fill(
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: InkWell(
+                                  onTap: () => _setThumb(i),
+                                  child: Image(
+                                    image: _providerFor(_images[i]),
+                                    fit: BoxFit.cover,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      )
-                    else
-                      const Spacer(),
-
-                    // 오른쪽 도움말 아이콘
-                    IconButton(
-                      tooltip: '지그 사이즈/높이 가이드',
-                      onPressed: _showSizeGuide,
-                      icon: const Icon(Icons.help_outline),
+                            Positioned(
+                              right: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: selected
+                                      ? const Color(0xFFFFE066)
+                                      : Colors.black45,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  '대표',
+                                  style: TextStyle(
+                                    color: selected ? Colors.black : Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              left: 6,
+                              top: 6,
+                              child: InkWell(
+                                onTap: () => _removeAt(i),
+                                child: const CircleAvatar(
+                                  radius: 12,
+                                  backgroundColor: Colors.black54,
+                                  child:
+                                  Icon(Icons.close, size: 14, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 8,
-                  children: _jigHeightOptions.map((h) {
-                    final isSelected = jigHeight == h;
-                    final disallowedSelected =
-                        isSelected && !_allowedHeights().contains(h);
-                    return SizedBox(
-                      height: _CHIP_HEIGHT_BDONG,
-                      child: ChoiceChip(
-                        label: Text(
-                          h,
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black,
-                            fontWeight:
-                            disallowedSelected ? FontWeight.w700 : FontWeight.w500,
-                          ),
+
+                  const SizedBox(height: 10),
+
+                  // 제목 (필수, 에러 하이라이트)
+                  TextField(
+                    controller: titleController,
+                    focusNode: _titleFocus,
+                    decoration: InputDecoration(
+                      labelText: '제목',
+                      errorText: _titleError ? '제목은 필수입니다.' : null,
+                      filled: _titleError,
+                      fillColor: Colors.red.withOpacity(0.06),
+                      border: const OutlineInputBorder(),
+                      enabledBorder: const OutlineInputBorder(),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: BorderSide(
+                          color: _titleError ? Colors.red : Colors.blue,
+                          width: _titleError ? 2 : 1.5,
                         ),
-                        selected: isSelected,
-                        selectedColor:
-                        disallowedSelected ? Colors.redAccent : Colors.blue,
-                        backgroundColor: Colors.white,
-                        side: disallowedSelected
-                            ? const BorderSide(
-                            color: Colors.redAccent, width: 1.5)
-                            : const BorderSide(color: Colors.transparent),
-                        onSelected: (_) => setState(() {
-                          jigHeight = h;
-                          if (_heightError) _heightError = false;
-                        }),
                       ),
-                    );
-                  }).toList(),
-                ),
+                      errorBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.red),
+                      ),
+                      focusedErrorBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.red, width: 2),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      if (_titleError && v.trim().isNotEmpty) {
+                        setState(() => _titleError = false);
+                      }
+                    },
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: '설명'),
+                    maxLines: 1,
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: registrantController,
+                    decoration: const InputDecoration(labelText: '등록자'),
+                    maxLines: 1,
+                  ),
 
-                const SizedBox(height: 16),
-                const Text("보관 장소",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                Wrap(
-                  spacing: 8,
-                  children: _locations.map((place) {
-                    final isSelected = location == place;
-                    return _chip44(
-                      label: place,
-                      selected: isSelected,
-                      onSelected: (_) => setState(() {
-                        location = place;
-                        if (location == '진량공장 B동') {
-                          baekSlot = null;
-                          baekFloor = null;
-                        } else if (location == '배광시험동 2층') {
-                          bDongSlot = null;
-                          bDongFloor = null;
-                        } else {
-                          bDongSlot = null;
-                          bDongFloor = null;
-                          baekSlot = null;
-                          baekFloor = null;
-                        }
-                        _slotError = false;
-                        _floorError = false;
-                      }),
-                    );
-                  }).toList(),
-                ),
-
-                // 진량공장 B동 세부
-                if (location == '진량공장 B동') ...[
-                  const SizedBox(height: 12),
-                  Row(
+                  const SizedBox(height: 16),
+                  const Text("지그 사이즈",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
                     children: [
-                      const Text("지그 위치",
+                      JigItemData.sizeSmall,
+                      JigItemData.sizeMedium,
+                      JigItemData.sizeLarge
+                    ].map((s) {
+                      final isSelected = jigSize == s;
+                      final label = _sizeLabels[s] ?? s;
+                      return _chip44(
+                        label: label,
+                        selected: isSelected,
+                        onSelected: (_) => setState(() => jigSize = s),
+                      );
+                    }).toList(),
+                  ),
+
+                  // 지그 높이
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text("지그 높이",
                           style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
-                      if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
+
+                      if (_heightError)
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: _errorPill('지그 높이를 선택해주세요.'),
+                          ),
+                        )
+                      else if (!_isHeightSelectionAllowed)
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF3CD),
+                                border: Border.all(color: const Color(0xFFEEA236)),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.warning_amber_rounded,
+                                      size: 16, color: Color(0xFF8A6D3B)),
+                                  SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      '지그 높이 때문에 보관이 어려울 수 있습니다.',
+                                      style: TextStyle(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF8A6D3B)),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const Spacer(),
+
+                      // 오른쪽 도움말 아이콘
+                      IconButton(
+                        tooltip: '지그 사이즈/높이 가이드',
+                        onPressed: _showSizeGuide,
+                        icon: const Icon(Icons.help_outline),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
-                    runSpacing: 8,
-                    children: _bdongSlots.map((slot) {
-                      final isSelected = bDongSlot == slot;
+                    children: _jigHeightOptions.map((h) {
+                      final isSelected = jigHeight == h;
+                      final disallowedSelected =
+                          isSelected && !_allowedHeights().contains(h);
+                      return SizedBox(
+                        height: _CHIP_HEIGHT_BDONG,
+                        child: ChoiceChip(
+                          label: Text(
+                            h,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black,
+                              fontWeight: disallowedSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor:
+                          disallowedSelected ? Colors.redAccent : Colors.blue,
+                          backgroundColor: Colors.white,
+                          side: disallowedSelected
+                              ? const BorderSide(
+                              color: Colors.redAccent, width: 1.5)
+                              : const BorderSide(color: Colors.transparent),
+                          onSelected: (_) => setState(() {
+                            jigHeight = h;
+                            if (_heightError) _heightError = false;
+                          }),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+
+                  const SizedBox(height: 16),
+                  const Text("보관 장소",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  Wrap(
+                    spacing: 8,
+                    children: _locations.map((place) {
+                      final isSelected = location == place;
                       return _chip44(
-                        label: slot,
+                        label: place,
                         selected: isSelected,
                         onSelected: (_) => setState(() {
-                          bDongSlot = slot;
-                          if (!_bdongSlotsNeedFloor.contains(slot)) {
+                          location = place;
+                          if (location == '진량공장 B동') {
+                            baekSlot = null;
+                            baekFloor = null;
+                          } else if (location == '배광시험동 2층') {
+                            bDongSlot = null;
                             bDongFloor = null;
+                          } else {
+                            bDongSlot = null;
+                            bDongFloor = null;
+                            baekSlot = null;
+                            baekFloor = null;
                           }
-                          if (_slotError) _slotError = false;
+                          _slotError = false;
                           _floorError = false;
                         }),
                       );
                     }).toList(),
                   ),
-                  if (bDongSlot != null &&
-                      _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+
+                  // 진량공장 B동 세부
+                  if (location == '진량공장 B동') ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Text("층 선택",
+                        const Text("지그 위치",
                             style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
-                        if (_floorError) _errorPill('층을 선택해주세요.'),
+                        if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
                       ],
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _floors.map((f) {
-                        final isSelected = bDongFloor == f;
+                      children: _bdongSlots.map((slot) {
+                        final isSelected = bDongSlot == slot;
                         return _chip44(
-                          label: f,
+                          label: slot,
                           selected: isSelected,
                           onSelected: (_) => setState(() {
-                            bDongFloor = f;
-                            if (_floorError) _floorError = false;
+                            bDongSlot = slot;
+                            if (!_bdongSlotsNeedFloor.contains(slot)) {
+                              bDongFloor = null;
+                            }
+                            if (_slotError) _slotError = false;
+                            _floorError = false;
                           }),
                         );
                       }).toList(),
                     ),
+                    if (bDongSlot != null &&
+                        _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Text("층 선택",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          if (_floorError) _errorPill('층을 선택해주세요.'),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _floors.map((f) {
+                          final isSelected = bDongFloor == f;
+                          return _chip44(
+                            label: f,
+                            selected: isSelected,
+                            onSelected: (_) => setState(() {
+                              bDongFloor = f;
+                              if (_floorError) _floorError = false;
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    if (bDongSlot != null &&
+                        !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                      const SizedBox(height: 12),
+                      const Text("층 선택",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 6),
+                      _disabledChip44('해당없음'),
+                    ],
                   ],
-                  if (bDongSlot != null &&
-                      !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
-                    const SizedBox(height: 12),
-                    const Text("층 선택",
-                        style: TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 6),
-                    _disabledChip44('해당없음'),
-                  ],
-                ],
 
-                // 배광시험동 2층 세부
-                if (location == '배광시험동 2층') ...[
+                  // 배광시험동 2층 세부
+                  if (location == '배광시험동 2층') ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Text("지그 위치 (스크롤)",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const SizedBox(width: 8),
+                        if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // 선택 요약
+                    _baekSummaryWidget(),
+                    const SizedBox(height: 6),
+
+                    SizedBox(
+                      height: _baekListHeight,
+                      child: ListView.builder(
+                        itemCount: _baekMaxR, // R 최대 길이에 맞춤
+                        itemBuilder: (context, index) {
+                          final n = index + 1;
+                          final r = 'R$n';
+                          final l = 'L$n';
+                          final showR = n <= _baekMaxR;
+                          final showL = n <= _baekMaxL;
+
+                          final isRSelected = baekSlot == r;
+                          final isLSelected = baekSlot == l;
+
+                          return Padding(
+                            padding: EdgeInsets.symmetric(
+                                vertical: _ROW_V_PADDING),
+                            child: Row(
+                              children: [
+                                if (showR)
+                                  Expanded(
+                                    child: _slotButton(
+                                      label: r,
+                                      selected: isRSelected,
+                                      onTap: () => setState(() {
+                                        baekSlot = r;
+                                        baekFloor = null;
+                                        if (_slotError) _slotError = false;
+                                        _floorError = false;
+                                      }),
+                                    ),
+                                  )
+                                else
+                                  const Expanded(child: SizedBox.shrink()),
+
+                                const SizedBox(width: 10),
+
+                                if (showL)
+                                  Expanded(
+                                    child: _slotButton(
+                                      label: l,
+                                      selected: isLSelected,
+                                      onTap: () => setState(() {
+                                        baekSlot = l;
+                                        baekFloor = null;
+                                        if (_slotError) _slotError = false;
+                                        _floorError = false;
+                                      }),
+                                    ),
+                                  )
+                                else
+                                  const Expanded(child: SizedBox.shrink()),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (baekSlot != null) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Text("층 선택",
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 8),
+                          if (_floorError) _errorPill('층을 선택해주세요.'),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: _baekFloors.map((f) {
+                          final isSelected = baekFloor == f;
+                          return _chip44(
+                            label: f,
+                            selected: isSelected,
+                            onSelected: (_) => setState(() {
+                              baekFloor = f;
+                              if (_floorError) _floorError = false;
+                            }),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ],
+
+                  const SizedBox(height: 16),
+                  const Divider(height: 1),
+
                   const SizedBox(height: 12),
+                  const Text("보관 기한",
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Text("지그 위치 (스크롤)",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(width: 8),
-                      if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
+                      OutlinedButton.icon(
+                        onPressed: () => _pickDate(isStart: true),
+                        icon: const Icon(Icons.calendar_today),
+                        label: Text(_dateLabel(startDate, '보관 날짜')),
+                      ),
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () => _pickDate(isStart: false),
+                        icon: const Icon(Icons.event_busy),
+                        label: Text(_dateLabel(endDate, '폐기 날짜')),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 6),
 
-                  // 선택 요약
-                  _baekSummaryWidget(),
-                  const SizedBox(height: 6),
-
+                  const SizedBox(height: 20),
                   SizedBox(
-                    height: _baekListHeight,
-                    child: ListView.builder(
-                      itemCount: _baekMaxR, // R 최대 길이에 맞춤
-                      itemBuilder: (context, index) {
-                        final n = index + 1;
-                        final r = 'R$n';
-                        final l = 'L$n';
-                        final showR = n <= _baekMaxR;
-                        final showL = n <= _baekMaxL;
-
-                        final isRSelected = baekSlot == r;
-                        final isLSelected = baekSlot == l;
-
-                        return Padding(
-                          padding: EdgeInsets.symmetric(
-                              vertical: _ROW_V_PADDING),
-                          child: Row(
-                            children: [
-                              if (showR)
-                                Expanded(
-                                  child: _slotButton(
-                                    label: r,
-                                    selected: isRSelected,
-                                    onTap: () => setState(() {
-                                      baekSlot = r;
-                                      baekFloor = null;
-                                      if (_slotError) _slotError = false;
-                                      _floorError = false;
-                                    }),
-                                  ),
-                                )
-                              else
-                                const Expanded(child: SizedBox.shrink()),
-
-                              const SizedBox(width: 10),
-
-                              if (showL)
-                                Expanded(
-                                  child: _slotButton(
-                                    label: l,
-                                    selected: isLSelected,
-                                    onTap: () => setState(() {
-                                      baekSlot = l;
-                                      baekFloor = null;
-                                      if (_slotError) _slotError = false;
-                                      _floorError = false;
-                                    }),
-                                  ),
-                                )
-                              else
-                                const Expanded(child: SizedBox.shrink()),
-                            ],
-                          ),
-                        );
-                      },
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        side: const BorderSide(color: Colors.blue),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(24)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text('등록 완료'),
                     ),
                   ),
-                  if (baekSlot != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Text("층 선택",
-                            style: TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(width: 8),
-                        if (_floorError) _errorPill('층을 선택해주세요.'),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _baekFloors.map((f) {
-                        final isSelected = baekFloor == f;
-                        return _chip44(
-                          label: f,
-                          selected: isSelected,
-                          onSelected: (_) => setState(() {
-                            baekFloor = f;
-                            if (_floorError) _floorError = false;
-                          }),
-                        );
-                      }).toList(),
-                    ),
-                  ],
                 ],
-
-                const SizedBox(height: 16),
-                const Divider(height: 1),
-
-                const SizedBox(height: 12),
-                const Text("보관 기한",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _pickDate(isStart: true),
-                      icon: const Icon(Icons.calendar_today),
-                      label: Text(_dateLabel(startDate, '보관 날짜')),
-                    ),
-                    const SizedBox(width: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => _pickDate(isStart: false),
-                      icon: const Icon(Icons.event_busy),
-                      label: Text(_dateLabel(endDate, '폐기 날짜')),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      side: const BorderSide(color: Colors.blue),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(24)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: const Text('등록 완료'),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1167,20 +1166,18 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         color: Colors.blue.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color:
-          (_slotError || _floorError) ? const Color(0xFFFF6B6B) : Colors.blue.withOpacity(0.25),
+          color: (_slotError || _floorError)
+              ? const Color(0xFFFF6B6B)
+              : Colors.blue.withOpacity(0.25),
         ),
       ),
       child: Row(
         children: [
           Icon(
-            (_slotError || _floorError)
-                ? Icons.error_outline
-                : Icons.info_outline,
+            (_slotError || _floorError) ? Icons.error_outline : Icons.info_outline,
             size: 18,
-            color: (_slotError || _floorError)
-                ? const Color(0xFFB00020)
-                : null,
+            color:
+            (_slotError || _floorError) ? const Color(0xFFB00020) : null,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1194,9 +1191,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
               onPressed: _clearBaekSelection,
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('초기화'),
-              style: TextButton.styleFrom(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 8)),
+              style:
+              TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
             ),
         ],
       ),

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 class HomeSearchTab extends StatefulWidget {
   final void Function(String query)? onSearch;
   final String hintText;
-  final String logoAssetPath;
-  final String slLogoAssetPath;
+  final String logoAssetPath;   // 상단 큰 로고
+  final String slLogoAssetPath; // 하단 SL 로고
 
-  // 커스텀 옵션
+  // 레이아웃 옵션
   final double logoHeight;
   final double slLogoHeight;
   final double contentMaxWidth;
@@ -63,32 +63,57 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
   Widget build(BuildContext context) {
     const hintStyle = TextStyle(color: Color(0xFF9CA3AF));
     final bottomSafe = MediaQuery.of(context).padding.bottom;
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
 
     return Stack(
       children: [
-        // 1) 항상 순백 배경 (Material3 색조 영향 제거)
+        // 항상 순백 배경
         const Positioned.fill(child: ColoredBox(color: Colors.white)),
 
-        // 2) 가운데 컨텐츠(로고 + 검색바 + 안내문구)
+        // 가운데 컨텐츠(로고/검색/안내)
         Positioned.fill(
           child: SafeArea(
             child: Center(
               child: LayoutBuilder(
                 builder: (context, c) {
-                  // 하단 SL 로고 영역을 미리 빼서 가운데 정렬 공간 확보
-                  final reservedForBottom =
-                      widget.slLogoHeight + widget.slLogoBottomPadding + bottomSafe + 24;
+                  // 가로에선 SL로고를 우하단으로 보내므로 예약 공간을 최소화
+                  final reservedForBottom = isLandscape
+                      ? (bottomSafe + 12)
+                      : (widget.slLogoHeight +
+                      widget.slLogoBottomPadding +
+                      bottomSafe +
+                      32);
+
+                  // 가로 모드에서 공간이 부족하면 간격/로고 크기 축소
+                  const _kSearchBarHeight = 56.0;
+                  const _kNoticeHeight = 20.0;
+                  final availableCenter =
+                  (c.maxHeight - reservedForBottom).clamp(0.0, double.infinity);
+
+                  final idealCenter =
+                      widget.logoHeight +
+                          widget.gapLogoToSearch +
+                          _kSearchBarHeight +
+                          widget.gapSearchToNotice +
+                          _kNoticeHeight;
+
+                  double raw = availableCenter / idealCenter;
+                  final scaleGaps = isLandscape ? raw.clamp(0.15, 1.0) : 1.0;
+                  final scaleLogo = isLandscape ? raw.clamp(0.60, 1.0) : 1.0;
+
+                  final gap1 = widget.gapLogoToSearch * scaleGaps;
+                  final gap2 = widget.gapSearchToNotice * scaleGaps;
+                  final logoH = widget.logoHeight * scaleLogo;
 
                   return SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        // 남는 공간이 있을 땐 세로 가운데, 부족하면 스크롤
-                        minHeight: (c.maxHeight - reservedForBottom).clamp(0, double.infinity),
-                      ),
+                      constraints: BoxConstraints(minHeight: availableCenter),
                       child: Center(
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(maxWidth: widget.contentMaxWidth),
+                          constraints:
+                          BoxConstraints(maxWidth: widget.contentMaxWidth),
                           child: Padding(
                             padding: widget.padding,
                             child: Column(
@@ -96,10 +121,10 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
                               children: [
                                 Image.asset(
                                   widget.logoAssetPath,
-                                  height: widget.logoHeight,
+                                  height: logoH,
                                   fit: BoxFit.contain,
                                 ),
-                                SizedBox(height: widget.gapLogoToSearch),
+                                SizedBox(height: gap1),
                                 _SearchBar(
                                   controller: _controller,
                                   focusNode: _focusNode,
@@ -109,11 +134,16 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
                                   actionColor: widget.actionColor,
                                   onSubmit: _submit,
                                 ),
-                                SizedBox(height: widget.gapSearchToNotice),
-                                const Text(
+                                SizedBox(height: gap2),
+                                Text(
                                   '생성형 AI는 실수할 수 있습니다. 중요한 정보를 확인하세요.',
-                                  style: TextStyle(color: Color(0xFF6B7280)),
+                                  style: TextStyle(
+                                    color: const Color(0xFF6B7280),
+                                    fontSize: isLandscape ? 13.0 : 14.0,
+                                  ),
                                   textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ],
                             ),
@@ -128,12 +158,18 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
           ),
         ),
 
-        // 3) 하단 SL 로고(바닥 고정)
+        // 하단 SL 로고: 세로=중앙, 가로=우하단
         Positioned(
-          left: 0,
-          right: 0,
+          left: isLandscape ? null : 0,
+          right: isLandscape ? 16 : 0,
           bottom: bottomSafe + widget.slLogoBottomPadding,
-          child: Center(
+          child: isLandscape
+              ? Image.asset(
+            widget.slLogoAssetPath,
+            height: widget.slLogoHeight,
+            fit: BoxFit.contain,
+          )
+              : Center(
             child: Image.asset(
               widget.slLogoAssetPath,
               height: widget.slLogoHeight,
