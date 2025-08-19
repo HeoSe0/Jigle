@@ -18,7 +18,7 @@ Color _colorForUtil({required int used, required int max, double alpha = 0.35}) 
   return base.withOpacity(alpha);
 }
 
-/// 배광시험동 2층 – R1~R24 / L1~L20 (각 슬롯 1~5층)
+/// 배광시험동 2층 – R1~R24 / L1~L20 (각 슬롯 1~4층)
 class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   final VoidCallback onBack;
 
@@ -31,7 +31,7 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
   /// 등록 시 상위로 전달(선택)
   final void Function(JigItemData newItem)? onCreateJig;
 
-  /// 층 버튼 색상 상한
+  /// 층 버튼 색상 상한(층 용량)
   final int maxCapacityPerFloor;
 
   /// (옵션) 지그 1개의 가중치 계산. 미제공 시 size -> 1/3/5
@@ -39,11 +39,17 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
 
   /// 🔧 층 버튼/레이아웃 커스터마이즈
   final double floorBtnWidthFrac;
-  final double floorBtnHeightFracOfFifth;
-  final double floorBtnGap;
+  final double floorBtnHeightFracOfFifth; // 균등 배치일 때만 사용
+  final double floorBtnGap;               // 균등 배치일 때만 사용
   final double floorBtnRadius;
   final EdgeInsets overlayPadding;
   final double floorButtonsYOffsetPx;
+
+  /// 🔧 선반 사진 기준 배치 옵션
+  final bool useImageAnchors;                  // true면 사진 기준 앵커 사용
+  final List<double> floorCenterFractions;     // 위→아래(4층→1층) 중앙 y비율(0~1)
+  final double? floorBtnHeightPx;              // 앵커 모드 버튼 높이(px)
+  final bool debugAnchorGuides;                // 앵커 가이드 라인
 
   const JinryangBaekwangTestBuildingMap({
     super.key,
@@ -55,10 +61,16 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
     this.weightOfItem,
     this.floorBtnWidthFrac = 0.86,
     this.floorBtnHeightFracOfFifth = 0.82,
-    this.floorBtnGap = 4,
+    this.floorBtnGap = 2,                 // ✅ 0.5배(4→2)
     this.floorBtnRadius = 10,
     this.overlayPadding = const EdgeInsets.all(8),
-    this.floorButtonsYOffsetPx = 0,
+    this.floorButtonsYOffsetPx = 5,       // ✅ 전체 5px 하향
+    this.useImageAnchors = true,          // ✅ 기본: 사진 기준
+    this.floorCenterFractions = const [   // ✅ 4층→1층 중앙 y비율
+      0.250, 0.440, 0.610, 0.785
+    ],
+    this.floorBtnHeightPx = 56,           // ✅ 기본 버튼 높이(px)
+    this.debugAnchorGuides = false,
   });
 
   @override
@@ -77,7 +89,7 @@ class _JinryangBaekwangTestBuildingMapState
 
   // ===== 최근 본 위치(FAB 프리필) =====
   String? _lastSlot;   // Ln / Rn
-  String? _lastFloor;  // 1층~5층
+  String? _lastFloor;  // 1층~4층
 
   // ===== 전역/외부 주입 리스너 =====
   late ValueListenable<List<JigItemData>> _activeListenable;
@@ -120,9 +132,14 @@ class _JinryangBaekwangTestBuildingMapState
   int _weight(JigItemData it) {
     if (widget.weightOfItem != null) return widget.weightOfItem!(it);
     switch ((it.size ?? '').replaceAll(' ', '')) {
-      case '대형': case '대': return 5;
-      case '중형': case '중': return 3;
-      default: return 1;
+      case '대형':
+      case '대':
+        return 5;
+      case '중형':
+      case '중':
+        return 3;
+      default:
+        return 1;
     }
   }
 
@@ -153,15 +170,17 @@ class _JinryangBaekwangTestBuildingMapState
       _itemsFor(slot, floor).fold<int>(0, (s, it) => s + _weight(it));
 
   int _usedTotalForSlot(String slot) {
-    const floors = ['1층', '2층', '3층', '4층', '5층'];
+    const floors = ['1층', '2층', '3층', '4층']; // ✅ 4층만 집계
     var sum = 0;
-    for (final f in floors) { sum += _usedFor(slot, f); }
+    for (final f in floors) {
+      sum += _usedFor(slot, f);
+    }
     return sum;
   }
 
   Color _slotColor(String slot) {
     final used = _usedTotalForSlot(slot);
-    final max = widget.maxCapacityPerFloor * 5; // 5층 합계 기준
+    final max = widget.maxCapacityPerFloor * 4; // ✅ 4층 기준
     return _colorForUtil(used: used, max: max, alpha: 0.8);
   }
 
@@ -222,9 +241,14 @@ class _JinryangBaekwangTestBuildingMapState
 
   // ===== 등록 폼 열기 =====
   void _openAddJig({String? slot, String? floor}) {
+    // ✅ 1~4층만 허용
+    const allowedFloors = ['1층', '2층', '3층', '4층'];
+    final safeFloor =
+    (floor != null && allowedFloors.contains(floor)) ? floor : null;
+
     String loc = '배광시험동 2층';
     if (slot != null && slot.isNotEmpty) loc += ' / $slot';
-    if (floor != null && floor.isNotEmpty) loc += ' / $floor';
+    if (safeFloor != null && safeFloor.isNotEmpty) loc += ' / $safeFloor';
 
     showModalBottomSheet(
       context: context,
@@ -253,7 +277,8 @@ class _JinryangBaekwangTestBuildingMapState
           width: _kBtnW,
           height: _kBtnH,
           child: Padding(
-            padding: EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : _kGapV),
+            padding:
+            EdgeInsets.only(bottom: i == labels.length - 1 ? 0 : _kGapV),
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: capColor,
@@ -262,7 +287,9 @@ class _JinryangBaekwangTestBuildingMapState
                   side: BorderSide(color: Colors.black),
                   borderRadius: BorderRadius.zero,
                 ),
-                padding: EdgeInsets.zero, elevation: 0, shadowColor: Colors.transparent,
+                padding: EdgeInsets.zero,
+                elevation: 0,
+                shadowColor: Colors.transparent,
               ),
               onPressed: () {
                 _lastSlot = label;
@@ -313,14 +340,27 @@ class _JinryangBaekwangTestBuildingMapState
               height: rowHeight,
               child: Stack(
                 children: [
-                  Positioned.fill(child: Container(color: Colors.green.shade800)),
-                  Positioned(left: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
-                  Positioned(right: yellowEdgeInset, top: 0, bottom: 0, width: yellowLineWidth, child: Container(color: Colors.yellowAccent)),
+                  Positioned.fill(
+                      child: Container(color: Colors.green.shade800)),
+                  Positioned(
+                      left: yellowEdgeInset,
+                      top: 0,
+                      bottom: 0,
+                      width: yellowLineWidth,
+                      child: Container(color: Colors.yellowAccent)),
+                  Positioned(
+                      right: yellowEdgeInset,
+                      top: 0,
+                      bottom: 0,
+                      width: yellowLineWidth,
+                      child: Container(color: Colors.yellowAccent)),
                 ],
               ),
             ),
-            Positioned(left: 0, top: 0, child: _buildShelfColumn(rightLabels, context)),
-            Positioned(right: 0, top: 0, child: _buildShelfColumn(leftLabels, context)),
+            Positioned(
+                left: 0, top: 0, child: _buildShelfColumn(rightLabels, context)),
+            Positioned(
+                right: 0, top: 0, child: _buildShelfColumn(leftLabels, context)),
           ],
         ),
       ),
@@ -341,45 +381,71 @@ class _JinryangBaekwangTestBuildingMapState
               contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               title: Row(
                 children: [
-                  Expanded(child: Text('$slot 슬롯', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700), overflow: TextOverflow.ellipsis)),
+                  Expanded(
+                      child: Text('$slot 슬롯',
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis)),
                   if (selectedFloor != null)
-                    Padding(padding: const EdgeInsets.only(left: 8), child: Text(selectedFloor!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                    Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(selectedFloor!,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.w700))),
                 ],
               ),
               content: SizedBox(
-                width: 720, height: 520,
-                child: BaekwangShelfViewer5Floors(
+                width: 720,
+                height: 520,
+                child: BaekwangShelfViewer4Floors(
                   slotLabel: slot,
                   maxCapacity: widget.maxCapacityPerFloor,
                   selectedFloor: selectedFloor,
-                  onSelectFloor: (floor) { setSB(() => selectedFloor = floor); _lastSlot = slot; _lastFloor = floor; },
+                  onSelectFloor: (floor) {
+                    setSB(() => selectedFloor = floor);
+                    _lastSlot = slot;
+                    _lastFloor = floor;
+                  },
                   onBackToFloors: () => setSB(() => selectedFloor = null),
                   capacityForFloor: (floorLabel) => _usedFor(slot, floorLabel),
                   detailsBuilder: (slotLabel, floorLabel, onBack) {
                     final items = _itemsFor(slotLabel, floorLabel);
                     return _BaekJigDetailPanel(
                       child: items.isEmpty
-                          ? const Center(child: Text('등록된 지그가 없습니다.', style: TextStyle(color: Colors.grey)))
+                          ? const Center(
+                          child: Text('등록된 지그가 없습니다.',
+                              style: TextStyle(color: Colors.grey)))
                           : ListView.separated(
                         padding: const EdgeInsets.all(12),
                         itemCount: items.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        separatorBuilder: (_, __) =>
+                        const SizedBox(height: 10),
                         itemBuilder: (_, i) {
                           final it = items[i];
                           return Stack(
                             children: [
                               JigItem(
-                                image: it.image, title: it.title, location: it.location, price: it.description,
-                                registrant: it.registrant, likes: it.likes, isLiked: it.isLiked,
-                                onLikePressed: () {}, storageDate: it.storageDate, disposalDate: it.disposalDate,
-                                size: it.size, jigHeight: it.jigHeight,
+                                image: it.image,
+                                title: it.title,
+                                location: it.location,
+                                price: it.description,
+                                registrant: it.registrant,
+                                likes: it.likes,
+                                isLiked: it.isLiked,
+                                onLikePressed: () {},
+                                storageDate: it.storageDate,
+                                disposalDate: it.disposalDate,
+                                size: it.size,
+                                jigHeight: it.jigHeight,
                               ),
                               Positioned(
-                                top: 0, right: 0,
+                                top: 0,
+                                right: 0,
                                 child: IconButton(
                                   tooltip: '수정',
-                                  icon: const Icon(Icons.edit, color: Colors.black),
-                                  onPressed: () => _openEdit(context, it), // ✅ 수정
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.black),
+                                  onPressed: () => _openEdit(context, it),
                                 ),
                               ),
                             ],
@@ -389,25 +455,36 @@ class _JinryangBaekwangTestBuildingMapState
                       onBack: onBack,
                     );
                   },
+                  // 전달 파라미터
                   floorBtnWidthFrac: widget.floorBtnWidthFrac,
                   floorBtnHeightFracOfFifth: widget.floorBtnHeightFracOfFifth,
                   floorBtnGap: widget.floorBtnGap,
                   floorBtnRadius: widget.floorBtnRadius,
                   overlayPadding: widget.overlayPadding,
                   floorButtonsYOffsetPx: widget.floorButtonsYOffsetPx,
+                  // 앵커 모드
+                  useImageAnchors: widget.useImageAnchors,
+                  floorCenterFractions: widget.floorCenterFractions,
+                  floorBtnHeightPx: widget.floorBtnHeightPx,
+                  debugAnchorGuides: widget.debugAnchorGuides,
                 ),
               ),
               actions: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
                   child: TextButton(
-                    onPressed: () { Navigator.pop(dctx); _openAddJig(slot: slot, floor: selectedFloor); },
+                    onPressed: () {
+                      Navigator.pop(dctx);
+                      _openAddJig(slot: slot, floor: selectedFloor);
+                    },
                     child: const Text('+ 지그 등록'),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
-                  child: TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('돌아가기')),
+                  child: TextButton(
+                      onPressed: () => Navigator.pop(dctx),
+                      child: const Text('돌아가기')),
                 ),
               ],
             );
@@ -419,12 +496,12 @@ class _JinryangBaekwangTestBuildingMapState
 
   @override
   Widget build(BuildContext context) {
-    final leftLabelsAll  = List.generate(20, (i) => 'L${i + 1}');
+    final leftLabelsAll = List.generate(20, (i) => 'L${i + 1}');
     final rightLabelsAll = List.generate(24, (i) => 'R${i + 1}');
-    final rightTop    = rightLabelsAll.sublist(0, 12);
+    final rightTop = rightLabelsAll.sublist(0, 12);
     final rightBottom = rightLabelsAll.sublist(12);
-    final leftTop     = leftLabelsAll.sublist(0, 10);
-    final leftBottom  = leftLabelsAll.sublist(10);
+    final leftTop = leftLabelsAll.sublist(0, 10);
+    final leftBottom = leftLabelsAll.sublist(10);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -432,33 +509,50 @@ class _JinryangBaekwangTestBuildingMapState
         child: Stack(
           children: [
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Center(
                 child: Container(
                   width: _rowWidth + 120,
-                  decoration: BoxDecoration(color: const Color(0xFFF2DEBC), borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFF2DEBC),
+                      borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 24),
                   child: Column(
                     children: [
                       const Column(children: [
-                        Text('IN', style: TextStyle(color: Colors.red, fontSize: 20, fontWeight: FontWeight.bold)),
-                        Icon(Icons.arrow_downward, size: 32, color: Colors.blue),
+                        Text('IN',
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold)),
+                        Icon(Icons.arrow_downward,
+                            size: 32, color: Colors.blue),
                         SizedBox(height: 20),
                       ]),
-                      _buildShelfRow(rightLabels: rightTop, leftLabels: leftTop, context: context),
+                      _buildShelfRow(
+                          rightLabels: rightTop,
+                          leftLabels: leftTop,
+                          context: context),
                       const SizedBox(height: 50),
-                      _buildShelfRow(rightLabels: rightBottom, leftLabels: leftBottom, context: context),
+                      _buildShelfRow(
+                          rightLabels: rightBottom,
+                          leftLabels: leftBottom,
+                          context: context),
                     ],
                   ),
                 ),
               ),
             ),
             Positioned(
-              top: 12, left: 12,
+              top: 12,
+              left: 12,
               child: IconButton.filledTonal(
                 onPressed: widget.onBack,
                 icon: const Icon(Icons.arrow_back),
-                style: IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+                style:
+                IconButton.styleFrom(padding: const EdgeInsets.all(10)),
                 tooltip: '뒤로',
               ),
             ),
@@ -473,20 +567,32 @@ class _JinryangBaekwangTestBuildingMapState
   }
 }
 
-/// 배광 슬롯 뷰어(5층)
-class BaekwangShelfViewer5Floors extends StatelessWidget {
+/// 배광 슬롯 뷰어(4층)
+class BaekwangShelfViewer4Floors extends StatelessWidget {
   final String slotLabel;
   final int maxCapacity;
   final String? selectedFloor;
   final ValueChanged<String> onSelectFloor;
   final VoidCallback onBackToFloors;
   final int Function(String floorLabel) capacityForFloor;
-  final Widget Function(String slotLabel, String floorLabel, VoidCallback onBack) detailsBuilder;
-  final double floorBtnWidthFrac, floorBtnHeightFracOfFifth, floorBtnGap, floorBtnRadius;
+  final Widget Function(
+      String slotLabel, String floorLabel, VoidCallback onBack) detailsBuilder;
+
+  // 공통 옵션
+  final double floorBtnWidthFrac,
+      floorBtnHeightFracOfFifth,
+      floorBtnGap,
+      floorBtnRadius;
   final EdgeInsets overlayPadding;
   final double floorButtonsYOffsetPx;
 
-  const BaekwangShelfViewer5Floors({
+  // 앵커 모드
+  final bool useImageAnchors;
+  final List<double> floorCenterFractions; // 위→아래(4층→1층)
+  final double? floorBtnHeightPx;
+  final bool debugAnchorGuides;
+
+  const BaekwangShelfViewer4Floors({
     super.key,
     required this.slotLabel,
     required this.maxCapacity,
@@ -497,10 +603,14 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
     required this.detailsBuilder,
     this.floorBtnWidthFrac = 0.86,
     this.floorBtnHeightFracOfFifth = 0.82,
-    this.floorBtnGap = 4,
+    this.floorBtnGap = 2,                 // ✅ 기본 2px
     this.floorBtnRadius = 10,
     this.overlayPadding = const EdgeInsets.all(8),
-    this.floorButtonsYOffsetPx = 0,
+    this.floorButtonsYOffsetPx = 5,       // ✅ 기본 5px
+    this.useImageAnchors = true,
+    this.floorCenterFractions = const [0.135, 0.355, 0.595, 0.835],
+    this.floorBtnHeightPx,
+    this.debugAnchorGuides = false,
   });
 
   @override
@@ -508,7 +618,9 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
     final showDetails = selectedFloor != null;
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 220),
-      child: showDetails ? detailsBuilder(slotLabel, selectedFloor!, onBackToFloors) : _buildFloorsOverlay(context),
+      child: showDetails
+          ? detailsBuilder(slotLabel, selectedFloor!, onBackToFloors)
+          : _buildFloorsOverlay(context),
     );
   }
 
@@ -521,13 +633,82 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
         final innerW = (W - pad.horizontal).clamp(0.0, double.infinity);
         final innerH = (H - pad.vertical).clamp(0.0, double.infinity);
 
-        final totalGap = floorBtnGap * 4.0;
-        final stripH = (innerH - totalGap) / 5.6;
-
-        final btnH = stripH * floorBtnHeightFracOfFifth;
+        const floorsCount = 4; // ✅ 4층 고정
         final btnW = innerW * floorBtnWidthFrac;
         final left = pad.left + (innerW - btnW) / 2;
-        final inStripOffset = (stripH - btnH) / 2;
+
+        // ----- 모드 1: 선반 사진 기준(앵커) -----
+        if (useImageAnchors && floorCenterFractions.length == floorsCount) {
+          final double btnH = (floorBtnHeightPx ?? 56).clamp(24.0, innerH);
+
+          final children = <Widget>[
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset('assets/shelf_empty.png', fit: BoxFit.fill),
+              ),
+            ),
+          ];
+
+          for (int i = 0; i < floorsCount; i++) {
+            final frac = floorCenterFractions[i].clamp(0.0, 1.0);
+            final floorLabel = '${floorsCount - i}층';
+            final used = maxCapacity == 0 ? 0 : capacityForFloor(floorLabel);
+
+            final centerY = pad.top + floorButtonsYOffsetPx + innerH * frac;
+            final top =
+            (centerY - btnH / 2).clamp(pad.top, pad.top + innerH - btnH);
+
+            children.add(Positioned(
+              left: left,
+              top: top,
+              width: btnW,
+              height: btnH,
+              child: Material(
+                color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
+                borderRadius: BorderRadius.circular(floorBtnRadius),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(floorBtnRadius),
+                  onTap: () => onSelectFloor(floorLabel),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '$floorLabel  (사용:$used/$maxCapacity)',
+                        style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ));
+
+            if (debugAnchorGuides) {
+              children.add(Positioned(
+                left: pad.left,
+                right: pad.right,
+                top: centerY - 0.5,
+                height: 1,
+                child: Container(color: Colors.purple.withOpacity(0.9)),
+              ));
+            }
+          }
+
+          return Stack(children: children);
+        }
+
+        // ----- 모드 2: 균등 배치(실제 보이는 gap = floorBtnGap) -----
+        final totalGap = floorBtnGap * (floorsCount - 1);
+        final perFloorH = (innerH - totalGap) / floorsCount;
+        final desiredBtnH = 58.0 * floorBtnHeightFracOfFifth;
+        final btnH2 = desiredBtnH.clamp(24.0, perFloorH);
+        final centerOffset = (perFloorH - btnH2) / 2;
 
         final children = <Widget>[
           Positioned.fill(
@@ -538,32 +719,43 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
           ),
         ];
 
-        for (int i = 0; i < 5; i++) {
-          final floorLabel = '${5 - i}층'; // 위=5층, 아래=1층
-          final used = capacityForFloor(floorLabel);
-          final top = pad.top + floorButtonsYOffsetPx + i * (stripH + floorBtnGap) + inStripOffset;
+        for (int i = 0; i < floorsCount; i++) {
+          final floorLabel = '${floorsCount - i}층';
+          final used = maxCapacity == 0 ? 0 : capacityForFloor(floorLabel);
+          final top = pad.top +
+              floorButtonsYOffsetPx +
+              i * (btnH2 + floorBtnGap) +
+              centerOffset;
 
-          children.add(
-            Positioned(
-              left: left, top: top, width: btnW, height: 58,
-              child: Material(
-                color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
+          children.add(Positioned(
+            left: left,
+            top: top,
+            width: btnW,
+            height: btnH2,
+            child: Material(
+              color: _colorForUtil(used: used, max: maxCapacity, alpha: 0.5),
+              borderRadius: BorderRadius.circular(floorBtnRadius),
+              child: InkWell(
                 borderRadius: BorderRadius.circular(floorBtnRadius),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(floorBtnRadius),
-                  onTap: () => onSelectFloor(floorLabel),
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(6)),
-                      child: Text('$floorLabel  (사용:$used/$maxCapacity)',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                onTap: () => onSelectFloor(floorLabel),
+                child: Center(
+                  child: Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '$floorLabel  (사용:$used/$maxCapacity)',
+                      style: const TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
               ),
             ),
-          );
+          ));
         }
 
         return Stack(children: children);
@@ -573,7 +765,8 @@ class BaekwangShelfViewer5Floors extends StatelessWidget {
 }
 
 class _BaekJigDetailPanel extends StatelessWidget {
-  final Widget child; final VoidCallback onBack;
+  final Widget child;
+  final VoidCallback onBack;
   const _BaekJigDetailPanel({required this.child, required this.onBack});
   @override
   Widget build(BuildContext context) {
@@ -587,7 +780,8 @@ class _BaekJigDetailPanel extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             color: Colors.transparent,
-            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+            child:
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
               TextButton(onPressed: onBack, child: const Text('돌아가기')),
             ]),
           ),

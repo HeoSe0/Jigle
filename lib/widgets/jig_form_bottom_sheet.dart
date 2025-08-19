@@ -41,7 +41,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   // 배광시험동: R은 1~24, L은 1~20
   static const int _baekMaxR = 24;
   static const int _baekMaxL = 20;
-  static const List<String> _baekFloors = ['1층', '2층', '3층', '4층', '5층'];
+  static const List<String> _baekFloors = ['1층', '2층', '3층', '4층'];
 
   static const int _maxImages = 5;
 
