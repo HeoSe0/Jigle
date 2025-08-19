@@ -12,13 +12,9 @@ import '../widgets/jig_item.dart';
 class MyJigsPage extends StatelessWidget {
   final List<JigItemData> likedItems;
 
-  // ✅ 창고 현황 화면으로 넘겨줄 전체 지그 목록 (없으면 빈 리스트)
-  final List<JigItemData> allItems;
-
   const MyJigsPage({
     super.key,
     required this.likedItems,
-    this.allItems = const [], // ← 기본값을 주어 상위가 안 넘겨도 빌드 가능
   });
 
   @override
@@ -28,33 +24,27 @@ class MyJigsPage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // 프로필
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Container(
-                    width: 60,
-                    height: 60,
+                    width: 60, height: 60,
                     color: Colors.grey.shade300,
                     child: const Icon(Icons.person, size: 30),
                   ),
                   const SizedBox(width: 16),
                   const Expanded(
-                    child: Text(
-                      '프로필',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: Text('프로필',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () {},
-                  ),
+                  IconButton(icon: const Icon(Icons.chevron_right), onPressed: () {}),
                 ],
               ),
             ),
+
+            // 메뉴
             Container(
               padding: const EdgeInsets.all(16),
               child: GridView.count(
@@ -65,37 +55,23 @@ class MyJigsPage extends StatelessWidget {
                 mainAxisSpacing: 16,
                 childAspectRatio: 4,
                 children: [
-                  // ✅ 페이지 위젯을 직접 넘기지 말고, builder 로 넘깁니다.
                   _buildMenuButton(context, '나의 지그', (_) => const MyJigScreen()),
                   _buildMenuButton(context, '나의 샘플', (_) => const MySampleScreen()),
-                  // ✅ 필수 파라미터 allItems 전달
-                  _buildMenuButton(context, '창고 현황', (_) => WarehouseScreen(allItems: allItems)),
+                  // ✅ allItems 인자 제거 — 전역 JigsStore를 내부에서 사용
+                  _buildMenuButton(context, '창고 현황', (_) => const WarehouseScreen()),
                   _buildMenuButton(context, '관리자 설정', (_) => const AdminScreen()),
                 ],
               ),
             ),
+
+            // 퀵 액션
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
               child: Row(
                 children: [
-                  _buildIconBox(
-                    context,
-                    Icons.favorite_border,
-                    '관심목록',
-                    _buildLikedListScreen(context),
-                  ),
-                  _buildIconBox(
-                    context,
-                    Icons.history,
-                    '최근 본 글',
-                    const RecentScreen(),
-                  ),
-                  _buildIconBox(
-                    context,
-                    Icons.star_border,
-                    '공지사항',
-                    const EventScreen(),
-                  ),
+                  _buildIconBox(context, Icons.favorite_border, '관심목록', _buildLikedListScreen(context)),
+                  _buildIconBox(context, Icons.history, '최근 본 글', const RecentScreen()),
+                  _buildIconBox(context, Icons.star_border, '공지사항', const EventScreen()),
                 ],
               ),
             ),
@@ -111,96 +87,59 @@ class MyJigsPage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
+          backgroundColor: Colors.white, elevation: 0,
           iconTheme: const IconThemeData(color: Colors.black),
           title: const Text("관심 지그", style: TextStyle(color: Colors.black)),
         ),
-        body: Container(
-          color: Colors.white,
-          child: ListView.builder(
-            padding: const EdgeInsets.all(10),
-            itemCount: likedItems.length,
-            itemBuilder: (context, index) {
-              final item = likedItems[index];
-              return Container(
-                color: Colors.white,
-                child: JigItem(
-                  image: item.image,
-                  title: item.title,
-                  location: item.location,
-                  price: item.description,
-                  registrant: item.registrant,
-                  likes: item.likes,
-                  isLiked: item.isLiked,
-                  storageDate: item.storageDate,
-                  disposalDate: item.disposalDate,
-                ),
-              );
-            },
-          ),
+        body: ListView.builder(
+          padding: const EdgeInsets.all(10),
+          itemCount: likedItems.length,
+          itemBuilder: (context, index) {
+            final item = likedItems[index];
+            return JigItem(
+              image: item.image,
+              title: item.title,
+              location: item.location,
+              price: item.description,
+              registrant: item.registrant,
+              likes: item.likes,
+              isLiked: item.isLiked,
+              storageDate: item.storageDate,
+              disposalDate: item.disposalDate,
+            );
+          },
         ),
       ),
     );
   }
 
-  // ✅ targetScreen -> WidgetBuilder 로 변경
-  Widget _buildMenuButton(
-      BuildContext context,
-      String label,
-      WidgetBuilder builder,
-      ) {
+  Widget _buildMenuButton(BuildContext context, String label, WidgetBuilder builder) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: builder),
-        );
-      },
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: builder)),
       child: Container(
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8),
         ),
-        child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 16),
-          ),
-        ),
+        child: Center(child: Text(label, style: const TextStyle(fontSize: 16))),
       ),
     );
   }
 
-  // (아이콘 메뉴는 기존처럼 위젯 자체를 넘겨도 OK)
-  Widget _buildIconBox(
-      BuildContext context,
-      IconData icon,
-      String label,
-      Widget targetScreen,
-      ) {
+  Widget _buildIconBox(BuildContext context, IconData icon, String label, Widget targetScreen) {
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => targetScreen),
-          );
-        },
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => targetScreen)),
         child: AspectRatio(
           aspectRatio: 2,
           child: Container(
             margin: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey),
-              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey), borderRadius: BorderRadius.circular(8),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon),
-                const SizedBox(height: 4),
-                Text(label, textAlign: TextAlign.center),
+                Icon(icon), const SizedBox(height: 4), Text(label, textAlign: TextAlign.center),
               ],
             ),
           ),
