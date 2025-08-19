@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
-import '../my_jig_page/warehouse_screen.dart';
+import '../my_jig_page/warehouse_tabs_screen.dart'; // ✅ 탭 컨테이너
 import '../my_jig_page/admin_screen.dart';
 import '../my_jig_page/recent_screen.dart';
 import '../my_jig_page/event_screen.dart';
@@ -35,13 +35,13 @@ class MyJigsPage extends StatelessWidget {
             children: [
               const ProfileHeader(),
               const SizedBox(height: 8),
-              // 동적 위젯이라 const 제거
+              // 🔧 리스트에서 const 제거 (동적 파라미터 전달 필요)
               MenuGrid(
                 items: [
                   const _MenuSpec('나의 지그', MyJigScreen()),
                   const _MenuSpec('나의 샘플', MySampleScreen()),
-                  // ✅ 창고 현황에 전역 지그 리스트 전달
-                  _MenuSpec('창고 현황', WarehouseScreen(itemsListenable: jigsNotifier)),
+                  // ✅ 전역 지그 목록을 탭 화면에 주입
+                  _MenuSpec('창고 현황', WarehouseTabsScreen(itemsListenable: jigsNotifier)),
                   const _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
@@ -154,7 +154,6 @@ class QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomSafe = MediaQuery.of(context).padding.bottom;
     return Padding(
-      // 바텀 내비/제스처바와 겹치지 않게 살짝 띄움
       padding: EdgeInsets.fromLTRB(12, 16, 12, 16 + bottomSafe / 2),
       child: Row(
         children: [
@@ -179,7 +178,6 @@ class _IconBox extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: ConstrainedBox(
-        // 🔧 세로 최소 높이 보장 → 아이콘/텍스트가 좁은 화면에서도 잘리지 않음
         constraints: const BoxConstraints(minHeight: 84),
         child: _CardButton(
           onTap: onTap,
@@ -235,7 +233,7 @@ class _CardButton extends StatelessWidget {
   }
 }
 
-/* -------------------------- liked list screen (수정 가능) -------------------------- */
+/* -------------------------- liked list screen -------------------------- */
 
 class LikedJigsScreen extends StatefulWidget {
   const LikedJigsScreen({
@@ -252,7 +250,6 @@ class LikedJigsScreen extends StatefulWidget {
 }
 
 class _LikedJigsScreenState extends State<LikedJigsScreen> {
-  // 이 화면에서 즉시 반영되도록 로컬 상태로 관리
   late final ValueNotifier<List<JigItemData>> _likedVN =
   ValueNotifier<List<JigItemData>>(List<JigItemData>.from(widget.likedItems));
 
@@ -284,12 +281,12 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
           final ln = widget.jigsNotifier;
           if (ln is ValueNotifier<List<JigItemData>>) {
             final all = List<JigItemData>.from(ln.value);
-            // 우선 참조 동일성으로 찾고, 없으면 타이틀/위치로 매칭
             int gi = all.indexOf(item);
             if (gi == -1) {
-              gi = all.indexWhere(
-                    (e) => e.title == item.title && e.location == item.location && e.registrant == item.registrant,
-              );
+              gi = all.indexWhere((e) =>
+              e.title == item.title &&
+                  e.location == item.location &&
+                  e.registrant == item.registrant);
             }
             if (gi != -1) {
               all[gi] = _withPreservedLike(edited: newJig, old: all[gi]);

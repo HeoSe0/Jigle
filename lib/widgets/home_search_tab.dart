@@ -139,7 +139,7 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
                                   '생성형 AI는 실수할 수 있습니다. 중요한 정보를 확인하세요.',
                                   style: TextStyle(
                                     color: const Color(0xFF6B7280),
-                                    fontSize: isLandscape ? 13.0 : 14.0,
+                                    fontSize: isLandscape ? 14.0 : 13.0,
                                   ),
                                   textAlign: TextAlign.center,
                                   maxLines: 1,
@@ -160,8 +160,8 @@ class _HomeSearchTabState extends State<HomeSearchTab> {
 
         // 하단 SL 로고: 세로=중앙, 가로=우하단
         Positioned(
-          left: isLandscape ? null : 0,
-          right: isLandscape ? 16 : 0,
+          left: isLandscape ? 40 : 0,
+          right: isLandscape ? null : 0,
           bottom: bottomSafe + widget.slLogoBottomPadding,
           child: isLandscape
               ? Image.asset(

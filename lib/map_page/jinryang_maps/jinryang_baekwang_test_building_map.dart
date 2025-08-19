@@ -67,7 +67,7 @@ class JinryangBaekwangTestBuildingMap extends StatefulWidget {
     this.floorButtonsYOffsetPx = 5,       // ✅ 전체 5px 하향
     this.useImageAnchors = true,          // ✅ 기본: 사진 기준
     this.floorCenterFractions = const [   // ✅ 4층→1층 중앙 y비율
-      0.250, 0.440, 0.610, 0.785
+      0.250, 0.440, 0.610, 0.790
     ],
     this.floorBtnHeightPx = 56,           // ✅ 기본 버튼 높이(px)
     this.debugAnchorGuides = false,
