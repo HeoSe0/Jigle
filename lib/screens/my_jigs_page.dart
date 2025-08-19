@@ -1,6 +1,6 @@
 // lib/screens/my_jigs_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // ✅ ValueListenable
+import 'package:flutter/foundation.dart'; // ValueListenable
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
@@ -11,13 +11,13 @@ import '../my_jig_page/event_screen.dart';
 
 import '../widgets/jig_item_data.dart';
 import '../widgets/jig_item.dart';
-import '../widgets/jig_form_bottom_sheet.dart'; // ✅ 수정 폼 추가
+import '../widgets/jig_form_bottom_sheet.dart';
 
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({
     super.key,
     required this.likedItems,
-    required this.jigsNotifier, // ✅ 전체 지그 목록
+    required this.jigsNotifier,
   });
 
   final List<JigItemData> likedItems;
@@ -25,33 +25,34 @@ class MyJigsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ▶ 하단 탭바에 가리지 않도록 여유 패딩 확보
+    final bottomSafe = MediaQuery.of(context).padding.bottom;
+    const extra = kBottomNavigationBarHeight + 16.0;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 16),
+          padding: EdgeInsets.only(bottom: bottomSafe + extra),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const ProfileHeader(),
               const SizedBox(height: 8),
-              // 동적 위젯이라 const 제거
               MenuGrid(
                 items: [
                   const _MenuSpec('나의 지그', MyJigScreen()),
                   const _MenuSpec('나의 샘플', MySampleScreen()),
-                  // ✅ WarehouseScreen에 전체 지그 전달
                   _MenuSpec('창고 현황', WarehouseScreen(allItems: jigsNotifier.value)),
                   const _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
               const SizedBox(height: 6),
               QuickActions(
-                // ✅ 관심목록 화면에 jigsNotifier도 넘겨서 저장 시 전체 목록 동기화
-                onTapLiked: () => _push(context, LikedJigsScreen(
-                  likedItems: likedItems,
-                  jigsNotifier: jigsNotifier,
-                )),
+                onTapLiked: () => _push(
+                  context,
+                  LikedJigsScreen(likedItems: likedItems, jigsNotifier: jigsNotifier),
+                ),
                 onTapRecent: () => _push(context, const RecentScreen()),
                 onTapEvent: () => _push(context, const EventScreen()),
               ),
@@ -171,18 +172,24 @@ class _IconBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ▶ AspectRatio 대신 최소 높이 제약으로 오버플로우 방지
     return Expanded(
-      child: AspectRatio(
-        aspectRatio: 2,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 72),
         child: _CardButton(
           onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon),
-              const SizedBox(height: 4),
-              Text(label, textAlign: TextAlign.center),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 2),
+                Icon(icon, size: 22),
+                const SizedBox(height: 4),
+                Text(label, textAlign: TextAlign.center),
+              ],
+            ),
           ),
         ),
       ),
@@ -227,7 +234,7 @@ class LikedJigsScreen extends StatefulWidget {
   const LikedJigsScreen({
     super.key,
     required this.likedItems,
-    required this.jigsNotifier, // ✅ 전체 목록 동기화용
+    required this.jigsNotifier,
   });
 
   final List<JigItemData> likedItems;
@@ -238,7 +245,6 @@ class LikedJigsScreen extends StatefulWidget {
 }
 
 class _LikedJigsScreenState extends State<LikedJigsScreen> {
-  // 이 화면에서 즉시 반영되도록 로컬 상태로 관리
   late final ValueNotifier<List<JigItemData>> _likedVN =
   ValueNotifier<List<JigItemData>>(List<JigItemData>.from(widget.likedItems));
 
@@ -263,11 +269,10 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
           list[index] = updated;
           _likedVN.value = list;
 
-          // 2) 전체 목록 동기화 (가능한 경우)
+          // 2) 전체 목록 동기화
           final ln = widget.jigsNotifier;
           if (ln is ValueNotifier<List<JigItemData>>) {
             final all = List<JigItemData>.from(ln.value);
-            // 우선 참조 동일성으로 찾고, 없으면 타이틀/위치로 매칭
             int gi = all.indexOf(item);
             if (gi == -1) {
               gi = all.indexWhere((e) =>

@@ -8,11 +8,12 @@ class JigFormBottomSheet extends StatefulWidget {
   final JigItemData? editItem;
   final Function(JigItemData) onSubmit;
 
-  // 맵에서 보낸 최초 위치 프리필
+  /// 맵에서 보낸 최초 위치 프리필
   final String? initialLocation;
 
-  // 현재 위치/선반/층에 따른 허용 높이 규칙(없으면 JigItemData.resolveHeightOptions 사용)
-  final List<String> Function(String location, String? slot, String? floor)? heightPolicyResolver;
+  /// 현재 위치/선반/층에 따른 허용 높이 규칙(없으면 JigItemData.resolveHeightOptions 사용)
+  final List<String> Function(String location, String? slot, String? floor)?
+  heightPolicyResolver;
 
   /// 지그 사이즈/높이 가이드 이미지(asset 경로)
   final String sizeGuideAssetPath;
@@ -98,8 +99,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   void initState() {
     super.initState();
     titleController = TextEditingController(text: widget.editItem?.title ?? '');
-    descriptionController = TextEditingController(text: widget.editItem?.description ?? '');
-    registrantController = TextEditingController(text: widget.editItem?.registrant ?? '');
+    descriptionController =
+        TextEditingController(text: widget.editItem?.description ?? '');
+    registrantController =
+        TextEditingController(text: widget.editItem?.registrant ?? '');
 
     // editItem.location 없으면 initialLocation으로 프리필
     final incomingLocation = widget.editItem?.location ?? widget.initialLocation;
@@ -108,15 +111,17 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       if (incomingLocation.contains('/')) {
         final parts = incomingLocation.split('/').map((s) => s.trim()).toList();
         final parent = parts.isNotEmpty ? parts[0] : '진량공장 B동';
-        final slot   = parts.length > 1 ? parts[1] : null;
-        final floor  = parts.length > 2 ? parts[2] : null;
+        final slot = parts.length > 1 ? parts[1] : null;
+        final floor = parts.length > 2 ? parts[2] : null;
 
         location = _locations.contains(parent) ? parent : _locations.first;
 
         if (location == '진량공장 B동') {
           if (slot != null && _bdongSlots.contains(slot)) bDongSlot = slot;
-          if (slot != null && _bdongSlotsNeedFloor.contains(slot)
-              && floor != null && _floors.contains(floor)) {
+          if (slot != null &&
+              _bdongSlotsNeedFloor.contains(slot) &&
+              floor != null &&
+              _floors.contains(floor)) {
             bDongFloor = floor;
           } else {
             bDongFloor = null;
@@ -152,9 +157,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       location = _locations.first;
     }
 
-    jigSize   = widget.editItem?.size ?? jigSize;
+    jigSize = widget.editItem?.size ?? jigSize;
     startDate = widget.editItem?.storageDate;
-    endDate   = widget.editItem?.disposalDate;
+    endDate = widget.editItem?.disposalDate;
 
     // 높이
     jigHeight = widget.editItem?.jigHeight;
@@ -178,7 +183,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       return;
     }
 
-    final files = await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85);
+    final files =
+    await picker.pickMultiImage(maxWidth: 1600, imageQuality: 85);
     if (!mounted || files.isEmpty) return;
 
     final adding = files.take(remain);
@@ -196,7 +202,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       _toast('최대 $_maxImages장까지 등록할 수 있어요.');
       return;
     }
-    final shot = await picker.pickImage(source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+    final shot = await picker.pickImage(
+        source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
     if (shot == null) return;
     final bytes = await shot.readAsBytes();
     if (!mounted) return;
@@ -277,11 +284,14 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   List<String> _allowedHeights() {
     String? slot, floor;
     if (location == '진량공장 B동') {
-      slot = bDongSlot; floor = bDongFloor;
+      slot = bDongSlot;
+      floor = bDongFloor;
     } else if (location == '배광시험동 2층') {
-      slot = baekSlot; floor = baekFloor;
+      slot = baekSlot;
+      floor = baekFloor;
     }
-    final resolver = widget.heightPolicyResolver ?? JigItemData.resolveHeightOptions;
+    final resolver =
+        widget.heightPolicyResolver ?? JigItemData.resolveHeightOptions;
     return resolver(location, slot, floor);
   }
 
@@ -298,8 +308,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   bool get _isSlotSelected {
     if (!_needSlotSelection) return true;
-    if (location == '진량공장 B동') return bDongSlot != null && bDongSlot!.isNotEmpty;
-    if (location == '배광시험동 2층') return baekSlot != null && baekSlot!.isNotEmpty;
+    if (location == '진량공장 B동') {
+      return bDongSlot != null && bDongSlot!.isNotEmpty;
+    }
+    if (location == '배광시험동 2층') {
+      return baekSlot != null && baekSlot!.isNotEmpty;
+    }
     return true;
   }
 
@@ -316,8 +330,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   bool get _isFloorSelected {
     if (!_needsFloorSelected) return true;
-    if (location == '진량공장 B동') return bDongFloor != null && bDongFloor!.isNotEmpty;
-    if (location == '배광시험동 2층') return baekFloor != null && baekFloor!.isNotEmpty;
+    if (location == '진량공장 B동') {
+      return bDongFloor != null && bDongFloor!.isNotEmpty;
+    }
+    if (location == '배광시험동 2층') {
+      return baekFloor != null && baekFloor!.isNotEmpty;
+    }
     return true;
   }
 
@@ -363,7 +381,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           children: [
             const Text(
               '지그 사이즈/높이 가이드',
-              style: TextStyle(fontWeight: FontWeight.w300, fontSize: 16), // 텍스트 크기 줄임
+              style: TextStyle(fontWeight: FontWeight.w300, fontSize: 16),
             ),
             const Spacer(),
             IconButton(
@@ -503,7 +521,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return SizedBox(
       height: _CHIP_HEIGHT_BDONG,
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(color: selected ? Colors.white : Colors.black)),
+        label: Text(label,
+            style: TextStyle(color: selected ? Colors.white : Colors.black)),
         selected: selected,
         selectedColor: Colors.blue,
         backgroundColor: Colors.white,
@@ -537,7 +556,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           backgroundColor: selected ? Colors.blue : Colors.white,
           foregroundColor: selected ? Colors.white : Colors.black,
           side: BorderSide(color: selected ? Colors.blue : Colors.black12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 12),
         ),
         onPressed: onTap,
@@ -548,63 +568,83 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomSafe = MediaQuery.of(context).padding.bottom;
+    final keyboard = MediaQuery.of(context).viewInsets.bottom;
+
     final Widget heroPreview = (_images.isNotEmpty)
         ? Image(image: _providerFor(_images[_thumbIndex]), fit: BoxFit.cover)
-        : (widget.editItem != null && widget.editItem!.image.trim().isNotEmpty)
+        : (widget.editItem != null &&
+        widget.editItem!.image.trim().isNotEmpty)
         ? Image(image: _providerFor(widget.editItem!.image), fit: BoxFit.cover)
-        : const Center(child: Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
+        : const Center(
+        child: Text('썸네일 미리보기 없음',
+            style: TextStyle(color: Colors.black54)));
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: Material(
         color: Colors.white,
         child: Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          // 키보드가 올라올 때만 하단 여백 추가
+          padding: EdgeInsets.only(bottom: keyboard),
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomSafe),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 10),
-
-                // 상단 툴바 영역
-                Row(
-                  children: [
-                    // ← 뒤로가기 버튼을 맨 왼쪽으로 이동
-                    IconButton(
-                      tooltip: '뒤로가기',
-                      onPressed: () => Navigator.maybePop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
-                    ),
-                    const SizedBox(width: 8),
-
-                    // 사진 추가 아이콘 & 버튼
-                    const Icon(Icons.add_a_photo, color: Colors.black),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade100,
-                        foregroundColor: Colors.black,
+                // 상단 툴바 영역 (카메라 아이콘 제거 + SafeArea로 상단 겹침 방지)
+                SafeArea(
+                  top: true,
+                  bottom: false,
+                  child: Row(
+                    children: [
+                      // 뒤로가기: 왼쪽으로 붙이기
+                      IconButton(
+                        tooltip: '뒤로가기',
+                        onPressed: () => Navigator.maybePop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new,
+                            color: Colors.black),
+                        visualDensity: VisualDensity.compact,
+                        constraints:
+                        const BoxConstraints(minWidth: 40, minHeight: 40),
                       ),
-                      onPressed: _pickFromGallery,
-                      child: const Text('사진 추가하기'),
-                    ),
-                    const SizedBox(width: 10),
+                      const SizedBox(width: 4),
 
-                    // 카메라 버튼
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.shade100,
-                        foregroundColor: Colors.black,
+                      // 사진 추가
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue.shade100,
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(0, 40),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: _pickFromGallery,
+                        child: const Text('사진 추가하기'),
                       ),
-                      onPressed: _pickFromCamera,
-                      child: const Text('카메라로 촬영'),
-                    ),
 
-                    const Spacer(),
-                    Text('${_images.length}/$_maxImages'),
-                  ],
+                      const SizedBox(width: 8),
+
+                      // 카메라로 촬영
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade100,
+                          foregroundColor: Colors.black,
+                          minimumSize: const Size(0, 40),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          shape: const StadiumBorder(),
+                        ),
+                        onPressed: _pickFromCamera,
+                        child: const Text('카메라로 촬영'),
+                      ),
+
+                      const Spacer(),
+                      Text('${_images.length}/$_maxImages'),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 12),
@@ -618,7 +658,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     border: Border.all(color: Colors.grey),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: ClipRRect(borderRadius: BorderRadius.circular(10), child: heroPreview),
+                  child:
+                  ClipRRect(borderRadius: BorderRadius.circular(10), child: heroPreview),
                 ),
 
                 // 썸네일 그리드
@@ -628,7 +669,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _images.length,
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 3,
                       mainAxisSpacing: 8,
                       crossAxisSpacing: 8,
@@ -643,7 +685,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                               borderRadius: BorderRadius.circular(10),
                               child: InkWell(
                                 onTap: () => _setThumb(i),
-                                child: Image(image: _providerFor(_images[i]), fit: BoxFit.cover),
+                                child: Image(
+                                  image: _providerFor(_images[i]),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
                           ),
@@ -651,9 +696,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                             right: 6,
                             top: 6,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: selected ? const Color(0xFFFFE066) : Colors.black45,
+                                color: selected
+                                    ? const Color(0xFFFFE066)
+                                    : Colors.black45,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -674,7 +722,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                               child: const CircleAvatar(
                                 radius: 12,
                                 backgroundColor: Colors.black54,
-                                child: Icon(Icons.close, size: 14, color: Colors.white),
+                                child: Icon(Icons.close,
+                                    size: 14, color: Colors.white),
                               ),
                             ),
                           ),
@@ -731,11 +780,14 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 ),
 
                 const SizedBox(height: 16),
-                const Text("지그 사이즈", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("지그 사이즈",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 Wrap(
                   spacing: 8,
-                  children: [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge].map((s) {
+                  children:
+                  [JigItemData.sizeSmall, JigItemData.sizeMedium, JigItemData.sizeLarge]
+                      .map((s) {
                     final isSelected = jigSize == s;
                     final label = _sizeLabels[s] ?? s;
                     return _chip44(
@@ -751,10 +803,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text("지그 높이", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text("지그 높이",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(width: 8),
 
-                    // 왼쪽 영역: 에러/경고 메시지(있으면 표시, 없으면 공간 채움)
                     if (_heightError)
                       Expanded(
                         child: Align(
@@ -767,21 +819,27 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFF3CD),
-                              border: Border.all(color: const Color(0xFFEEA236)),
+                              border:
+                              Border.all(color: const Color(0xFFEEA236)),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: const [
-                                Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFF8A6D3B)),
+                                Icon(Icons.warning_amber_rounded,
+                                    size: 16, color: Color(0xFF8A6D3B)),
                                 SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
                                     '지그 높이 때문에 보관이 어려울 수 있습니다.',
-                                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF8A6D3B)),
+                                    style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF8A6D3B)),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -806,7 +864,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   spacing: 8,
                   children: _jigHeightOptions.map((h) {
                     final isSelected = jigHeight == h;
-                    final disallowedSelected = isSelected && !_allowedHeights().contains(h);
+                    final disallowedSelected =
+                        isSelected && !_allowedHeights().contains(h);
                     return SizedBox(
                       height: _CHIP_HEIGHT_BDONG,
                       child: ChoiceChip(
@@ -814,14 +873,17 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           h,
                           style: TextStyle(
                             color: isSelected ? Colors.white : Colors.black,
-                            fontWeight: disallowedSelected ? FontWeight.w700 : FontWeight.w500,
+                            fontWeight:
+                            disallowedSelected ? FontWeight.w700 : FontWeight.w500,
                           ),
                         ),
                         selected: isSelected,
-                        selectedColor: disallowedSelected ? Colors.redAccent : Colors.blue,
+                        selectedColor:
+                        disallowedSelected ? Colors.redAccent : Colors.blue,
                         backgroundColor: Colors.white,
                         side: disallowedSelected
-                            ? const BorderSide(color: Colors.redAccent, width: 1.5)
+                            ? const BorderSide(
+                            color: Colors.redAccent, width: 1.5)
                             : const BorderSide(color: Colors.transparent),
                         onSelected: (_) => setState(() {
                           jigHeight = h;
@@ -833,7 +895,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 ),
 
                 const SizedBox(height: 16),
-                const Text("보관 장소", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("보관 장소",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 Wrap(
                   spacing: 8,
                   children: _locations.map((place) {
@@ -867,7 +930,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text("지그 위치", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text("지그 위치",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
                       if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
                     ],
@@ -892,11 +956,13 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       );
                     }).toList(),
                   ),
-                  if (bDongSlot != null && _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                  if (bDongSlot != null &&
+                      _bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text("층 선택",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         if (_floorError) _errorPill('층을 선택해주세요.'),
                       ],
@@ -918,9 +984,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       }).toList(),
                     ),
                   ],
-                  if (bDongSlot != null && !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
+                  if (bDongSlot != null &&
+                      !_bdongSlotsNeedFloor.contains(bDongSlot!)) ...[
                     const SizedBox(height: 12),
-                    const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                    const Text("층 선택",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     _disabledChip44('해당없음'),
                   ],
@@ -931,7 +999,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      const Text("지그 위치 (스크롤)", style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text("지그 위치 (스크롤)",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(width: 8),
                       if (_slotError) _errorPill('지그 위치를 선택해주세요.'),
                     ],
@@ -957,7 +1026,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         final isLSelected = baekSlot == l;
 
                         return Padding(
-                          padding: EdgeInsets.symmetric(vertical: _ROW_V_PADDING),
+                          padding: EdgeInsets.symmetric(
+                              vertical: _ROW_V_PADDING),
                           child: Row(
                             children: [
                               if (showR)
@@ -1003,7 +1073,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Text("층 선택", style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text("층 선택",
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(width: 8),
                         if (_floorError) _errorPill('층을 선택해주세요.'),
                       ],
@@ -1031,7 +1102,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                 const Divider(height: 1),
 
                 const SizedBox(height: 12),
-                const Text("보관 기한", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("보관 기한",
+                    style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 Row(
                   children: [
@@ -1058,7 +1130,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       backgroundColor: Colors.white,
                       foregroundColor: Colors.black,
                       side: const BorderSide(color: Colors.blue),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     child: const Text('등록 완료'),
@@ -1094,17 +1167,20 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         color: Colors.blue.withOpacity(0.06),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: (_slotError || _floorError)
-              ? const Color(0xFFFF6B6B)
-              : Colors.blue.withOpacity(0.25),
+          color:
+          (_slotError || _floorError) ? const Color(0xFFFF6B6B) : Colors.blue.withOpacity(0.25),
         ),
       ),
       child: Row(
         children: [
           Icon(
-            (_slotError || _floorError) ? Icons.error_outline : Icons.info_outline,
+            (_slotError || _floorError)
+                ? Icons.error_outline
+                : Icons.info_outline,
             size: 18,
-            color: (_slotError || _floorError) ? const Color(0xFFB00020) : null,
+            color: (_slotError || _floorError)
+                ? const Color(0xFFB00020)
+                : null,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1118,7 +1194,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
               onPressed: _clearBaekSelection,
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('초기화'),
-              style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+              style: TextButton.styleFrom(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 8)),
             ),
         ],
       ),
