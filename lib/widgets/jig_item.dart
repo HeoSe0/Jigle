@@ -319,8 +319,8 @@ class _JigItemState extends State<JigItem> {
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
                           color: Colors.black54,
                           borderRadius: BorderRadius.circular(999),
@@ -366,7 +366,8 @@ class _JigItemState extends State<JigItem> {
     String heroTag(int index) =>
         'jig_thumb_${widget.title.hashCode}_${gallery[index].hashCode}_$index';
 
-    return Semantics(
+    // ----- 카드 본문(스케일 대상) -----
+    Widget core = Semantics(
       label: '지그 카드: ${widget.title}',
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
@@ -521,10 +522,11 @@ class _JigItemState extends State<JigItem> {
                           ),
                         if (prettyHeight != null)
                           _withTooltip(
-                            message:
-                            heightOk ? null : '현재 위치에서 허용되지 않는 높이일 수 있어요',
+                            message: heightOk
+                                ? null
+                                : '현재 위치에서 허용되지 않는 높이일 수 있어요',
                             child: _badge(
-                              prettyHeight,
+                              prettyHeight!, // <- non-null 보장
                               bg: heightBg,
                               fg: heightFg,
                               icon: heightIcon,
@@ -578,6 +580,29 @@ class _JigItemState extends State<JigItem> {
           ],
         ),
       ),
+    );
+
+    // ----- 좁은 폭에서 자동 스케일 다운 -----
+    // 기준폭보다 부모 폭이 좁으면 FittedBox(scaleDown)로 축소해 오버플로우를 방지합니다.
+    const double kBaseWidthForScale = 420.0; // 필요 시 360~440 내에서 조정
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final maxW = constraints.maxWidth;
+        if (maxW + 0.5 >= kBaseWidthForScale) {
+          // 충분히 넓음: 원래 크기 그대로
+          return core;
+        }
+        // 좁음: 기준폭으로 고정한 뒤 scaleDown
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.topLeft,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: kBaseWidthForScale),
+            child: core,
+          ),
+        );
+      },
     );
   }
 }
