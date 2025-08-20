@@ -554,7 +554,7 @@ class _JinryangBaekwangTestBuildingMapState
                 onPressed: widget.onBack,
                 icon: const Icon(Icons.arrow_back),
                 style:
-                IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+                IconButton.styleFrom(padding: const EdgeInsets.all(10), backgroundColor: Colors.white),
                 tooltip: '뒤로',
               ),
             ),

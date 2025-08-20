@@ -481,7 +481,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
           child: IconButton.filledTonal(
             onPressed: widget.onBack,
             icon: const Icon(Icons.arrow_back),
-            style: IconButton.styleFrom(padding: const EdgeInsets.all(10)),
+            style: IconButton.styleFrom(padding: const EdgeInsets.all(10),backgroundColor: Colors.white),
             tooltip: '뒤로',
           ),
         ),
