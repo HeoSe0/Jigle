@@ -587,7 +587,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               if (dialogZone != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: const Color(0xFFF2E9F7), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: const Color(0xFFFFFFFF), borderRadius: BorderRadius.circular(12)),
                   child: Text(dialogZone!, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
                 ),
             ]),
@@ -888,7 +888,7 @@ class _JigDetailPanel extends StatelessWidget {
         children: [
           if (showHeader)
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), color: const Color(0xFFF2E9F7),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8), color: Colors.white,
               child: Row(children: [
                 Text('$shelf 선반', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
                 const SizedBox(width: 12),

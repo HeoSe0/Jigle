@@ -103,7 +103,7 @@ class _MapPageState extends State<MapPage> {
                                 height: 24,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade200,
+                                  color: Colors.white,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
