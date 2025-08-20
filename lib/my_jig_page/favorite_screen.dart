@@ -58,7 +58,6 @@ class MyJigsPage extends StatelessWidget {
                   _buildMenuButton(context, '나의 지그', (_) => const MyJigScreen()),
                   _buildMenuButton(context, '나의 샘플', (_) => const MySampleScreen()),
                   // ✅ allItems 인자 제거 — 전역 JigsStore를 내부에서 사용
-                  _buildMenuButton(context, '창고 현황', (_) => const WarehouseScreen()),
                   _buildMenuButton(context, '관리자 설정', (_) => const AdminScreen()),
                 ],
               ),
