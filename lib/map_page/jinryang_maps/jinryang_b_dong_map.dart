@@ -489,6 +489,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openAddJig(slot: _lastSlot, floor: _lastFloor),
         label: const Text('+ 지그 등록'),
+        backgroundColor: Colors.white,
       ),
     );
   }
