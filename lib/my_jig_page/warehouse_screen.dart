@@ -322,10 +322,10 @@ class ShelfCapacityCard extends StatelessWidget {
                   child: Text('${(cap * 100).round()}%', style: TextStyle(fontWeight: FontWeight.w800, color: barColor)),
                 ),
               ]),
-              const SizedBox(height: 10),
+              const SizedBox(height: 6),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(value: cap, minHeight: 10, color: barColor, backgroundColor: barBg),
+                child: LinearProgressIndicator(value: cap, minHeight: 6, color: barColor, backgroundColor: barBg),
               ),
               const SizedBox(height: 10),
               Expanded(
@@ -392,12 +392,12 @@ class ZoneCapacityCard extends StatelessWidget {
                   child: Text('${(cap * 100).round()}%', style: TextStyle(fontWeight: FontWeight.w800, color: barColor)),
                 ),
               ]),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(value: cap, minHeight: 12, color: barColor, backgroundColor: barBg),
+                child: LinearProgressIndicator(value: cap, minHeight: 10, color: barColor, backgroundColor: barBg),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Expanded(
                 child: Center(
                   child: Container(

@@ -255,9 +255,9 @@ class _BaekShelfCard extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(label, style: const TextStyle(fontWeight: FontWeight.w800)),
+                Text(label, style: const TextStyle(fontSize: 12,fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
-                Text('$v / $max', style: const TextStyle(fontSize: 12, color: Colors.black87, fontWeight: FontWeight.w600)),
+                Text('$v / $max', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -282,13 +282,13 @@ class _BaekShelfCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(color: Colors.black.withOpacity(0.08), borderRadius: BorderRadius.circular(10)),
-                  child: Text(status.shelf, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+                  child: Text(status.shelf, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800)),
                 ),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(color: barColor.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
-                  child: Text('${(cap * 100).round()}%', style: TextStyle(fontWeight: FontWeight.w800, color: barColor)),
+                  child: Text('${(cap * 100).round()}%', style: TextStyle(fontSize: 10,fontWeight: FontWeight.w800, color: barColor)),
                 ),
               ]),
               const SizedBox(height: 10),
@@ -296,7 +296,7 @@ class _BaekShelfCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(10),
                 child: LinearProgressIndicator(value: cap, minHeight: 10, color: barColor, backgroundColor: barBg),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 5),
               Row(children: [
                 _floorBox('4층', status.f4, status.maxPerFloor),
                 const SizedBox(width: 6),
