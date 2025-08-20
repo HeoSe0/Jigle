@@ -162,6 +162,18 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
     // 높이
     jigHeight = widget.editItem?.jigHeight;
+
+    // ✅ 편집 모드 이미지 프리필
+    if (widget.editItem != null) {
+      final g = widget.editItem!.images.isNotEmpty
+          ? widget.editItem!.images
+          : [widget.editItem!.image];
+      _images
+        ..clear()
+        ..addAll(g);
+      final ti = widget.editItem!.thumbnailIndex;
+      _thumbIndex = (ti >= 0 && ti < _images.length) ? ti : 0;
+    }
   }
 
   @override
@@ -201,7 +213,10 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       return;
     }
     final shot = await picker.pickImage(
-        source: ImageSource.camera, maxWidth: 1600, imageQuality: 85);
+      source: ImageSource.camera,
+      maxWidth: 1600,
+      imageQuality: 85,
+    );
     if (shot == null) return;
     final bytes = await shot.readAsBytes();
     if (!mounted) return;
@@ -490,12 +505,26 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
     final String finalLocation = _buildLocationString();
 
-    final String finalThumb = _images.isNotEmpty
-        ? _images[_thumbIndex]
+    // ✅ 최종 이미지/대표 인덱스 결정
+    final List<String> finalImages = _images.isNotEmpty
+        ? List<String>.from(_images)
+        : (widget.editItem != null
+        ? (widget.editItem!.images.isNotEmpty
+        ? widget.editItem!.images
+        : [widget.editItem!.image])
+        : <String>[]);
+
+    final int finalThumbIndex =
+    (finalImages.isNotEmpty) ? (_thumbIndex.clamp(0, finalImages.length - 1)) : 0;
+
+    final String finalThumb = (finalImages.isNotEmpty)
+        ? finalImages[finalThumbIndex]
         : (widget.editItem?.image ?? 'assets/sample_box1.png');
 
     final newJig = JigItemData(
       image: finalThumb,
+      images: finalImages,            // ✅ 여러 장 함께 저장
+      thumbnailIndex: finalThumbIndex, // ✅ 대표 인덱스 저장
       title: trimmedTitle,
       location: finalLocation,
       description: descriptionController.text.trim(),
@@ -503,8 +532,11 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       storageDate: startDate,
       disposalDate: endDate,
       size: jigSize,
-      jigHeight: jigHeight, // 저장
+      jigHeight: jigHeight,
     );
+
+    // debug용: 제출 페이로드 점검
+    // debugPrint('payload: ${newJig.toJson()}');
 
     widget.onSubmit(newJig);
     Navigator.pop(context);
@@ -519,8 +551,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     return SizedBox(
       height: _CHIP_HEIGHT_BDONG,
       child: ChoiceChip(
-        label:
-        Text(label, style: TextStyle(color: selected ? Colors.white : Colors.black)),
+        label: Text(label,
+            style: TextStyle(color: selected ? Colors.white : Colors.black)),
         selected: selected,
         selectedColor: Colors.blue,
         backgroundColor: Colors.white,
@@ -573,8 +605,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         : (widget.editItem != null && widget.editItem!.image.trim().isNotEmpty)
         ? Image(image: _providerFor(widget.editItem!.image), fit: BoxFit.cover)
         : const Center(
-        child:
-        Text('썸네일 미리보기 없음', style: TextStyle(color: Colors.black54)));
+        child: Text('썸네일 미리보기 없음',
+            style: TextStyle(color: Colors.black54)));
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -583,26 +615,28 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
         /// ✅ 상단 상태바·노치만큼 안전 여백을 확보
         child: SafeArea(
-          top: true, bottom: false, left: false, right: false,
-
+          top: true,
+          bottom: false,
+          left: false,
+          right: false,
           child: Padding(
             // 키보드가 올라올 때만 하단 여백 추가
             padding: EdgeInsets.only(bottom: keyboard, top: 8),
-
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomSafe),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 상단 툴바(이제 별도 SafeArea 필요 없음)
+                  // 상단 툴바
                   Row(
                     children: [
-                      // 뒤로가기: 왼쪽으로 붙이기
+                      // 뒤로가기
                       IconButton(
                         tooltip: '뒤로가기',
                         onPressed: () => Navigator.maybePop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black),
+                        icon:
+                        const Icon(Icons.arrow_back_ios_new, color: Colors.black),
                         visualDensity: VisualDensity.compact,
                         constraints:
                         const BoxConstraints(minWidth: 40, minHeight: 40),
@@ -625,7 +659,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
                       const SizedBox(width: 8),
 
-                      // 카메라로 촬영
+                      // 카메라 촬영
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green.shade100,
@@ -656,7 +690,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10), child: heroPreview),
+                        borderRadius: BorderRadius.circular(10),
+                        child: heroPreview),
                   ),
 
                   // 썸네일 그리드
@@ -666,7 +701,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: _images.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 3,
                         mainAxisSpacing: 8,
                         crossAxisSpacing: 8,
@@ -718,8 +754,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                                 child: const CircleAvatar(
                                   radius: 12,
                                   backgroundColor: Colors.black54,
-                                  child:
-                                  Icon(Icons.close, size: 14, color: Colors.white),
+                                  child: Icon(Icons.close,
+                                      size: 14, color: Colors.white),
                                 ),
                               ),
                             ),
@@ -870,9 +906,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                             h,
                             style: TextStyle(
                               color: isSelected ? Colors.white : Colors.black,
-                              fontWeight: disallowedSelected
-                                  ? FontWeight.w700
-                                  : FontWeight.w500,
+                              fontWeight:
+                              disallowedSelected ? FontWeight.w700 : FontWeight.w500,
                             ),
                           ),
                           selected: isSelected,
@@ -880,8 +915,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           disallowedSelected ? Colors.redAccent : Colors.blue,
                           backgroundColor: Colors.white,
                           side: disallowedSelected
-                              ? const BorderSide(
-                              color: Colors.redAccent, width: 1.5)
+                              ? const BorderSide(color: Colors.redAccent, width: 1.5)
                               : const BorderSide(color: Colors.transparent),
                           onSelected: (_) => setState(() {
                             jigHeight = h;
@@ -1024,8 +1058,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           final isLSelected = baekSlot == l;
 
                           return Padding(
-                            padding: EdgeInsets.symmetric(
-                                vertical: _ROW_V_PADDING),
+                            padding:
+                            EdgeInsets.symmetric(vertical: _ROW_V_PADDING),
                             child: Row(
                               children: [
                                 if (showR)
@@ -1176,8 +1210,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           Icon(
             (_slotError || _floorError) ? Icons.error_outline : Icons.info_outline,
             size: 18,
-            color:
-            (_slotError || _floorError) ? const Color(0xFFB00020) : null,
+            color: (_slotError || _floorError) ? const Color(0xFFB00020) : null,
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -1191,8 +1224,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
               onPressed: _clearBaekSelection,
               icon: const Icon(Icons.refresh, size: 16),
               label: const Text('초기화'),
-              style:
-              TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+              ),
             ),
         ],
       ),

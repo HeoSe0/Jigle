@@ -482,9 +482,11 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                   children: [
                     JigItem(
                       image: item.image,
+                      images: item.images,
+                      thumbnailIndex: item.thumbnailIndex,
                       title: item.title,
                       location: item.location,
-                      price: item.description,
+                      description: item.description,
                       registrant: item.registrant,
                       likes: item.likes,
                       isLiked: item.isLiked,

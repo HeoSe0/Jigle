@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../widgets/jig_item.dart';
 import '../widgets/jig_item_data.dart';
-import '../widgets/jig_form_bottom_sheet.dart';
 import '../data/jigs_store.dart';
 
 const String kPlantB = '진량공장 B동';
@@ -190,8 +189,10 @@ void _showJigListBottomSheet({
                         return JigItem(
                           image: it.image,
                           title: it.title,
+                          images: it.images,                 // ✅ 여러 장 전달
+                          thumbnailIndex: it.thumbnailIndex,
                           location: it.location,
-                          price: it.description,
+                          description: it.description,
                           registrant: it.registrant,
                           likes: it.likes,
                           isLiked: it.isLiked,

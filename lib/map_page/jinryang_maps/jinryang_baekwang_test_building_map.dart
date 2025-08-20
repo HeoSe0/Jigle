@@ -131,7 +131,7 @@ class _JinryangBaekwangTestBuildingMapState
   // ===== Util =====
   int _weight(JigItemData it) {
     if (widget.weightOfItem != null) return widget.weightOfItem!(it);
-    switch ((it.size ?? '').replaceAll(' ', '')) {
+    switch ((it.size ??' ').replaceAll(' ', '')) {
       case '대형':
       case '대':
         return 5;
@@ -427,8 +427,10 @@ class _JinryangBaekwangTestBuildingMapState
                               JigItem(
                                 image: it.image,
                                 title: it.title,
+                                images: it.images,                 // ✅ 여러 장 전달
+                                thumbnailIndex: it.thumbnailIndex,
                                 location: it.location,
-                                price: it.description,
+                                description: it.description,
                                 registrant: it.registrant,
                                 likes: it.likes,
                                 isLiked: it.isLiked,

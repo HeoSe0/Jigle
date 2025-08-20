@@ -327,8 +327,10 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
                   JigItem(
                     image: item.image,
                     title: item.title,
+                    images: item.images,
+                    thumbnailIndex: item.thumbnailIndex,
                     location: item.location,
-                    price: item.description,
+                    description: item.description,
                     registrant: item.registrant,
                     likes: item.likes,
                     isLiked: item.isLiked,

@@ -149,8 +149,10 @@ void _showJigListBottomSheetBaek({
                         return JigItem(
                           image: it.image,
                           title: it.title,
+                          images: it.images,                 // ✅ 여러 장 전달
+                          thumbnailIndex: it.thumbnailIndex,
                           location: it.location,
-                          price: it.description,
+                          description: it.description,
                           registrant: it.registrant,
                           likes: it.likes,
                           isLiked: it.isLiked,

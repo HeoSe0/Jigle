@@ -927,9 +927,11 @@ class _JigListPanel extends StatelessWidget {
           children: [
             JigItem(
               image: it.image,
+              images: it.images,
+              thumbnailIndex: it.thumbnailIndex,
               title: it.title,
               location: it.location,
-              price: it.description,
+              description: it.description,
               registrant: it.registrant,
               likes: it.likes,
               isLiked: it.isLiked,

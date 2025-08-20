@@ -4,8 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 /// 지그 1개 아이템 카드 UI
-class JigItem extends StatelessWidget {
-  final String image, title, location, price, registrant;
+class JigItem extends StatefulWidget {
+  /// 대표 이미지(하위호환). [images]가 없으면 이 값이 사용됩니다.
+  final String image;
+
+  /// 여러 장 지원: 네트워크/에셋/데이터URL 혼용 가능
+  final List<String>? images;
+
+  /// 현재 대표(초기 표시) 인덱스
+  final int thumbnailIndex;
+
+  final String title, location, description, registrant;
   final int likes;
   final bool isLiked;
   final DateTime? storageDate;
@@ -26,40 +35,136 @@ class JigItem extends StatelessWidget {
   const JigItem({
     super.key,
     required this.image,
+    this.images,
+    this.thumbnailIndex = 0,
     required this.title,
     required this.location,
-    required this.price,
+
+    // ----- 설명(신규) & price(구버전 호환) -----
+    String? description,
+    @Deprecated('Use "description:" instead of "price:".')
+    String? price,
+
     required this.registrant,
     required this.likes,
     required this.storageDate,
     required this.disposalDate,
     this.isLiked = false,
     this.onLikePressed,
-
-    // ⬇️ 추가(선택)
     this.size,
     this.jigHeight,
     this.heightPolicyResolver,
-  });
+  }) : description = (description ?? price ?? '');
 
+  @override
+  State<JigItem> createState() => _JigItemState();
+}
+
+class _JigItemState extends State<JigItem> {
+  static const _thumbW = 100.0;
+  static const _thumbH = 100.0;
+  final _thumbBorder = BorderRadius.circular(10);
+
+  late final PageController _pageController;
+  late int _current;
+
+  @override
+  void initState() {
+    super.initState();
+    final g = _gallery;
+    _current = g.isEmpty ? 0 : widget.thumbnailIndex.clamp(0, g.length - 1);
+    _pageController = PageController(initialPage: _current);
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  // =========== 날짜 & 텍스트 유틸 ===========
   String _fmt(DateTime d) => DateFormat('yyyy-MM-dd').format(d.toLocal());
 
   String? get _dateRangeText {
-    if (storageDate != null && disposalDate != null) {
-      return '${_fmt(storageDate!)} ~ ${_fmt(disposalDate!)}';
+    if (widget.storageDate != null && widget.disposalDate != null) {
+      return '${_fmt(widget.storageDate!)} ~ ${_fmt(widget.disposalDate!)}';
     }
-    if (storageDate != null) return '보관: ${_fmt(storageDate!)}';
-    if (disposalDate != null) return '폐기: ${_fmt(disposalDate!)}';
+    if (widget.storageDate != null) return '보관: ${_fmt(widget.storageDate!)}';
+    if (widget.disposalDate != null) return '폐기: ${_fmt(widget.disposalDate!)}';
     return null;
   }
 
-  bool get _isNetwork =>
-      image.startsWith('http://') || image.startsWith('https://');
-  bool get _isDataUrl => image.startsWith('data:');
+  // =========== 이미지 유틸 ===========
+  List<String> get _gallery =>
+      (widget.images != null && widget.images!.isNotEmpty)
+          ? widget.images!
+          : [widget.image];
 
-  // ---------- 라벨/정책 유틸 ----------
+  bool _isNetworkSrc(String src) =>
+      src.startsWith('http://') || src.startsWith('https://');
+  bool _isDataUrlSrc(String src) => src.startsWith('data:');
+
+  Widget _buildImage(
+      String src, {
+        double? width,
+        double? height,
+        BoxFit fit = BoxFit.cover,
+        int? cacheWidth,
+        BorderRadius? radius,
+      }) {
+    final placeholder = Container(
+      width: width,
+      height: height,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: radius ?? _thumbBorder,
+      ),
+      child: const Icon(Icons.image_outlined, color: Colors.grey),
+    );
+
+    if (_isNetworkSrc(src)) {
+      return ClipRRect(
+        borderRadius: radius ?? _thumbBorder,
+        child: Image.network(
+          src,
+          width: width,
+          height: height,
+          fit: fit,
+          cacheWidth: cacheWidth,
+          loadingBuilder: (c, child, p) => p == null ? child : placeholder,
+          errorBuilder: (c, e, s) => placeholder,
+        ),
+      );
+    } else if (_isDataUrlSrc(src)) {
+      final comma = src.indexOf(',');
+      if (comma > 0) {
+        final b64 = src.substring(comma + 1);
+        final bytes = base64Decode(b64);
+        return ClipRRect(
+          borderRadius: radius ?? _thumbBorder,
+          child: Image.memory(bytes, width: width, height: height, fit: fit),
+        );
+      }
+      return placeholder;
+    } else {
+      return ClipRRect(
+        borderRadius: radius ?? _thumbBorder,
+        child: Image.asset(
+          src,
+          width: width,
+          height: height,
+          fit: fit,
+          cacheWidth: cacheWidth,
+          errorBuilder: (c, e, s) => placeholder,
+        ),
+      );
+    }
+  }
+
+  // =========== 라벨/정책 유틸 ===========
   String? get _sizePretty {
-    final s = size?.trim();
+    final s = widget.size?.trim();
     if (s == null || s.isEmpty) return null;
     switch (s) {
       case '소형':
@@ -85,25 +190,22 @@ class JigItem extends StatelessWidget {
     return (m == null) ? null : '${m.group(1)}층';
   }
 
-  // 기본 높이 정책 (진량공장 B동: 1~3층은 30/50 미만, 4층은 무제한)
   List<String> _defaultHeightPolicy(String parent, String? slot, String? floor) {
     const all = ['30cm 미만', '50cm 미만', '50cm 이상'];
     if (parent.startsWith('진량공장 B동')) {
-      if (floor == '4층') return all; // 무제한 = 모두 허용
+      if (floor == '4층') return all;
       return const ['30cm 미만', '50cm 미만'];
     }
-    // 기타 장소는 모두 허용
     return all;
-    // 필요 시 다른 건물 규칙을 여기 분기 추가
   }
 
   bool get _isHeightAllowed {
-    final jh = jigHeight?.trim();
-    if (jh == null || jh.isEmpty) return true; // 미선택은 경고 표시 안 함
-    final parent = _parentLocation(location);
-    final slot = _slotOf(location);
-    final floor = _floorOf(location);
-    final allowed = (heightPolicyResolver ?? _defaultHeightPolicy)(
+    final jh = widget.jigHeight?.trim();
+    if (jh == null || jh.isEmpty) return true;
+    final parent = _parentLocation(widget.location);
+    final slot = _slotOf(widget.location);
+    final floor = _floorOf(widget.location);
+    final allowed = (widget.heightPolicyResolver ?? _defaultHeightPolicy)(
       parent,
       slot,
       floor,
@@ -111,7 +213,6 @@ class JigItem extends StatelessWidget {
     return allowed.contains(jh);
   }
 
-  // 공통 배지 위젯
   Widget _badge(String text, {Color? bg, Color? fg, IconData? icon}) {
     final background = bg ?? Colors.blue.withOpacity(0.08);
     final foreground = fg ?? Colors.blue.shade700;
@@ -157,55 +258,116 @@ class JigItem extends StatelessWidget {
     );
   }
 
+  // =========== 전체화면 갤러리 ===========
+  void _openGallery({
+    required List<String> gallery,
+    required int startIndex,
+    required String heroTag,
+  }) {
+    final pageController = PageController(initialPage: startIndex);
+    int current = startIndex;
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      barrierDismissible: true,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return GestureDetector(
+              onTap: () => Navigator.of(ctx).pop(),
+              child: Stack(
+                children: [
+                  Center(
+                    child: PageView.builder(
+                      controller: pageController,
+                      onPageChanged: (i) => setState(() => current = i),
+                      itemCount: gallery.length,
+                      itemBuilder: (c, i) {
+                        final content = InteractiveViewer(
+                          panEnabled: true,
+                          minScale: 1.0,
+                          maxScale: 4.0,
+                          child: _buildImage(
+                            gallery[i],
+                            fit: BoxFit.contain,
+                            radius: BorderRadius.zero,
+                          ),
+                        );
+                        return i == startIndex
+                            ? Hero(tag: heroTag, child: content)
+                            : content;
+                      },
+                    ),
+                  ),
+                  Positioned(
+                    top: 16 + MediaQuery.of(ctx).padding.top,
+                    right: 16,
+                    child: Material(
+                      color: Colors.black54,
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        tooltip: '닫기',
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 24 + MediaQuery.of(ctx).padding.bottom,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Container(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '${current + 1} / ${gallery.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // =========== 빌드 ===========
   @override
   Widget build(BuildContext context) {
+    final gallery = _gallery;
     final dateText = _dateRangeText;
-    const w = 100.0, h = 100.0;
     final dpr = MediaQuery.of(context).devicePixelRatio;
-    final cacheW = (w * dpr).round();
-    final border = BorderRadius.circular(10);
-
-    final placeholder = Container(
-      width: w, height: h, alignment: Alignment.center,
-      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: border),
-      child: const Icon(Icons.image_outlined, color: Colors.grey),
-    );
-
-    Widget thumb;
-    if (_isNetwork) {
-      thumb = Image.network(
-        image, width: w, height: h, fit: BoxFit.cover, cacheWidth: cacheW,
-        loadingBuilder: (c, child, progress) => progress == null ? child : placeholder,
-        errorBuilder: (c, e, s) => placeholder,
-      );
-    } else if (_isDataUrl) {
-      final comma = image.indexOf(',');
-      if (comma > 0) {
-        final b64 = image.substring(comma + 1);
-        final bytes = base64Decode(b64);
-        thumb = Image.memory(bytes, width: w, height: h, fit: BoxFit.cover);
-      } else {
-        thumb = placeholder;
-      }
-    } else {
-      thumb = Image.asset(
-        image, width: w, height: h, fit: BoxFit.cover, cacheWidth: cacheW,
-        errorBuilder: (c, e, s) => placeholder,
-      );
-    }
-
-    final prettySize = _sizePretty;
-    final prettyHeight = (jigHeight != null && jigHeight!.trim().isNotEmpty)
-        ? '지그 높이 ${jigHeight!}'
+    final cacheW = (_thumbW * dpr).round();
+    final prettyHeight =
+    (widget.jigHeight != null && widget.jigHeight!.trim().isNotEmpty)
+        ? '지그 높이 ${widget.jigHeight!}'
         : null;
 
     final heightOk = _isHeightAllowed;
-    final heightBg = heightOk ? const Color(0xFFEFFAF3) : const Color(0xFFFFF3CD);
+    final heightBg =
+    heightOk ? const Color(0xFFEFFAF3) : const Color(0xFFFFF3CD);
     final heightFg = heightOk ? const Color(0xFF1B8E5A) : const Color(0xFF8A6D3B);
     final heightIcon = heightOk ? Icons.height : Icons.warning_amber_rounded;
 
+    String heroTag(int index) =>
+        'jig_thumb_${widget.title.hashCode}_${gallery[index].hashCode}_$index';
+
     return Semantics(
-      label: '지그 카드: $title',
+      label: '지그 카드: ${widget.title}',
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
         padding: const EdgeInsets.all(14),
@@ -224,26 +386,96 @@ class JigItem extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(borderRadius: border, child: thumb),
+            // 썸네일 캐러셀(스와이프 가능)
+            Semantics(
+              button: true,
+              label: '이미지 갤러리 열기',
+              child: InkWell(
+                borderRadius: _thumbBorder,
+                onTap: () => _openGallery(
+                  gallery: gallery,
+                  startIndex: _current,
+                  heroTag: heroTag(_current),
+                ),
+                child: SizedBox(
+                  width: _thumbW,
+                  height: _thumbH,
+                  child: Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: _thumbBorder,
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (i) => setState(() => _current = i),
+                          itemCount: gallery.length,
+                          itemBuilder: (_, i) => Hero(
+                            tag: heroTag(i),
+                            child: _buildImage(
+                              gallery[i],
+                              width: _thumbW,
+                              height: _thumbH,
+                              fit: BoxFit.cover,
+                              cacheWidth: cacheW,
+                              radius: _thumbBorder,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (gallery.length > 1)
+                        Positioned(
+                          right: 6,
+                          bottom: 6,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.55),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Text(
+                              '${_current + 1}/${gallery.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(width: 12),
+
+            // 오른쪽 정보 영역
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // 제목
                   Text(
-                    title,
+                    widget.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16.5),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16.5,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   // 위치
                   Text(
-                    location,
+                    widget.location,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
                   ),
                   // 날짜
                   if (dateText != null)
@@ -253,35 +485,44 @@ class JigItem extends StatelessWidget {
                         dateText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12.5, color: Colors.black54),
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          color: Colors.black54,
+                        ),
                       ),
                     ),
                   // 설명
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(
-                      price.trim().isNotEmpty ? price : '지그 설명 없음',
+                      widget.description.trim().isNotEmpty
+                          ? widget.description
+                          : '지그 설명 없음',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 13, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black87,
+                      ),
                     ),
                   ),
 
                   // === 배지(지그 사이즈 / 지그 높이) ===
-                  if (prettySize != null || prettyHeight != null) ...[
+                  if (_sizePretty != null || prettyHeight != null) ...[
                     const SizedBox(height: 6),
                     Wrap(
                       children: [
-                        if (prettySize != null)
+                        if (_sizePretty != null)
                           _badge(
-                            prettySize,
+                            _sizePretty!,
                             bg: const Color(0xFFEFF1FF),
                             fg: const Color(0xFF3D4ED7),
                             icon: Icons.widgets_outlined,
                           ),
                         if (prettyHeight != null)
                           _withTooltip(
-                            message: heightOk ? null : '현재 위치에서 허용되지 않는 높이일 수 있어요',
+                            message:
+                            heightOk ? null : '현재 위치에서 허용되지 않는 높이일 수 있어요',
                             child: _badge(
                               prettyHeight,
                               bg: heightBg,
@@ -293,33 +534,42 @@ class JigItem extends StatelessWidget {
                     ),
                   ],
 
+                  // 등록자(왼쪽 정렬)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(
+                      '등록자: ${widget.registrant}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: true,
+                    ),
+                  ),
+
                   const SizedBox(height: 6),
-                  // 등록자 + 좋아요
+
+                  // 좋아요는 오른쪽 정렬만
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      Expanded(
-                        child: Text(
-                          '등록자: $registrant',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
-                      ),
                       Semantics(
                         button: true,
-                        label: isLiked ? '좋아요 취소' : '좋아요',
+                        label: widget.isLiked ? '좋아요 취소' : '좋아요',
                         child: IconButton(
-                          onPressed: onLikePressed,
-                          tooltip: isLiked ? '좋아요 취소' : '좋아요',
+                          onPressed: widget.onLikePressed,
+                          tooltip: widget.isLiked ? '좋아요 취소' : '좋아요',
                           iconSize: 18,
                           padding: const EdgeInsets.all(6),
                           constraints: const BoxConstraints(),
                           splashRadius: 16,
-                          icon: Icon(Icons.favorite, color: isLiked ? Colors.red : Colors.grey),
+                          icon: Icon(
+                            Icons.favorite,
+                            color: widget.isLiked ? Colors.red : Colors.grey,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Text('$likes', style: const TextStyle(fontSize: 13)),
+                      Text('${widget.likes}', style: const TextStyle(fontSize: 13)),
                     ],
                   ),
                 ],
