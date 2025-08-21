@@ -117,22 +117,33 @@ void _showJigListBottomSheetBaek({
                       spacing: 8,
                       runSpacing: 8,
                       children: [
+                        // 전체
                         FilterChip(
                           label: const Text('전체'),
                           selected: selectedFloors.isEmpty,
                           onSelected: (_) => setSB(() => selectedFloors.clear()),
+                          // ▼ 색상 커스터마이즈
+                          backgroundColor: Colors.white,
+                          selectedColor: const Color(0xFFEDE7F6), // 선택 시 칩 배경
+                          showCheckmark: true,
+                          checkmarkColor: Colors.black,           // 체크 아이콘(✓) 색
+                          labelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+                          shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
                         ),
                         for (final f in floorChoices)
                           FilterChip(
                             label: Text(f),
                             selected: selectedFloors.contains(f),
                             onSelected: (sel) => setSB(() {
-                              if (sel) {
-                                selectedFloors.add(f);
-                              } else {
-                                selectedFloors.remove(f);
-                              }
+                              if (sel) { selectedFloors.add(f); } else { selectedFloors.remove(f); }
                             }),
+                            // ▼ 동일한 스타일
+                            backgroundColor: Colors.white,
+                            selectedColor: const Color(0xFFEDE7F6),
+                            showCheckmark: true,
+                            checkmarkColor: Colors.black,
+                            labelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+                            shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
                           ),
                       ],
                     ),
@@ -311,9 +322,12 @@ class _BaekShelfCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.black, // ← 글자+아이콘 색
+                  ),
                   onPressed: onDetail,
-                  icon: const Icon(Icons.list_alt),
-                  label: const Text('자세히'),
+                  icon: const Icon(Icons.list_alt, color: Colors.black),
+                  label: const Text('자세히', style: TextStyle(color: Colors.black)),
                 ),
               ),
             ],
