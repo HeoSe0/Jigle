@@ -543,6 +543,8 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
     return showDialog<void>(
       context: context, barrierDismissible: true,
       builder: (dctx) => AlertDialog(
+        backgroundColor: Colors.white,      // ← 추가
+        surfaceTintColor: Colors.white,     // ← 추가 (Material3 틴트 제거)
         titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
         contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
         title: Text('$areaLabel Zone', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
@@ -556,6 +558,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 4, 12),
             child: TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.black),
               onPressed: () {
                 Navigator.pop(dctx);
                 _openAddJig(slot: areaLabel); // F존에는 층 없음
@@ -565,7 +568,9 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 8, 16, 12),
-            child: TextButton(onPressed: () => Navigator.pop(dctx), child: const Text('닫기')),
+            child: TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.black),
+                onPressed: () => Navigator.pop(dctx), child: const Text('닫기')),
           ),
         ],
       ),
@@ -579,6 +584,8 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
         String? dialogZone;
         return StatefulBuilder(
           builder: (ctx, setSB) => AlertDialog(
+            backgroundColor: Colors.white,      // ← 추가
+            surfaceTintColor: Colors.white,     // ← 추가 (Material3 틴트 제거)
             titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             title: Row(children: [
@@ -640,6 +647,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 4, 12),
                 child: TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.black),
                   onPressed: () {
                     Navigator.pop(dialogCtx);
                     _openAddJig(slot: label, floor: dialogZone);
@@ -649,7 +657,9 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 8, 16, 12),
-                child: TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('닫기')),
+                child: TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Colors.black),
+                    onPressed: () => Navigator.pop(dialogCtx), child: const Text('닫기')),
               ),
             ],
           ),
@@ -901,9 +911,9 @@ class _JigDetailPanel extends StatelessWidget {
             ),
           Expanded(child: ColoredBox(color: Colors.white, child: child)),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), decoration: const BoxDecoration(color: Color(0xFFF2E9F7)),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), decoration: const BoxDecoration(color: Colors.white),
             child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('돌아가기')),
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('돌아가기', style: TextStyle(color: Colors.black))),
             ]),
           ),
         ],
