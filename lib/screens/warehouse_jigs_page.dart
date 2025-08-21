@@ -526,7 +526,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       // + 지그 등록
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOrEditJigDialog(),
-        label: const Text('+ 지그 등록'),
+        label: const Text('+ 지그 등록', style: const TextStyle (color: Colors.black)),
         backgroundColor: Colors.white,
       ),
     );

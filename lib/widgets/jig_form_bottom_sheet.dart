@@ -271,7 +271,38 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       firstDate: DateTime(now.year - 5),
       lastDate: DateTime(now.year + 5),
       helpText: isStart ? '보관 날짜 선택' : '폐기 날짜 선택',
+      builder: (context, child) {
+        final base = Theme.of(context);
+        return Theme(
+          data: base.copyWith(
+            // 다이얼로그 배경
+            dialogBackgroundColor: Colors.white,
+
+            // 달력의 포커스/선택 색(원하는 색으로 조정 가능)
+            colorScheme: base.colorScheme.copyWith(
+              primary: Colors.blue.shade400,   // 상단 헤더 & 선택된 날짜 색
+              onPrimary: Colors.white,         // 위에 올 텍스트 색
+              onSurface: Colors.black,         // 본문 텍스트 색
+            ),
+
+            // 확인/취소 버튼 색
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue.shade400,
+              ),
+            ),
+
+            // (Material 3 사용하는 경우 추가로 안전하게)
+            datePickerTheme: const DatePickerThemeData(
+              // Flutter 버전에 따라 지원될 수도, 안될 수도 있습니다.
+              backgroundColor: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
+
     if (picked == null) return;
     setState(() {
       if (isStart) {
@@ -1141,14 +1172,14 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                     children: [
                       OutlinedButton.icon(
                         onPressed: () => _pickDate(isStart: true),
-                        icon: const Icon(Icons.calendar_today),
-                        label: Text(_dateLabel(startDate, '보관 날짜')),
+                        icon: Icon(Icons.calendar_today, color: Colors.blue.shade400),
+                        label: Text(_dateLabel(startDate, '보관 날짜'), style: const TextStyle (color: Colors.black)),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
                         onPressed: () => _pickDate(isStart: false),
-                        icon: const Icon(Icons.event_busy),
-                        label: Text(_dateLabel(endDate, '폐기 날짜')),
+                        icon: Icon(Icons.event_busy, color: Colors.blue.shade400),
+                        label: Text(_dateLabel(endDate, '폐기 날짜'), style: const TextStyle (color: Colors.black)),
                       ),
                     ],
                   ),
