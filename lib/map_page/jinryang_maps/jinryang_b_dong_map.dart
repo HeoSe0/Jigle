@@ -406,6 +406,7 @@ class _JinryangBDongMapState extends State<JinryangBDongMap> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,   // ← 추가
       body: Stack(children: [
         LayoutBuilder(builder: (context, c) {
           final cw = c.maxWidth, ch = c.maxHeight;

@@ -25,6 +25,10 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
+  // ───── 상단 버튼/여백 규격 ─────
+  static const double _factoryBtnHeight = 32.0; // 버튼 살짝 더 작게
+  static const double _topGap = 26.0;           // 버튼 라인 바닥 정렬용 여백
+
   String selectedFactoryGroup = 'SL 진량 본사';
   String? selectedBuilding;
 
@@ -140,7 +144,10 @@ class _MapPageState extends State<MapPage> {
     final buttonBottom = buttonTopLeft.dy + buttonBox.size.height;
 
     const desiredWidth = 240.0;
-    final menuWidth = desiredWidth.clamp(200.0, overlaySize.width - 24);
+    final menuWidth = desiredWidth
+        .clamp(200.0, overlaySize.width - 24)
+        .toDouble(); // 타입 안정성
+
     double left = buttonTopLeft.dx;
     if (left + menuWidth > overlaySize.width - 12) left = overlaySize.width - menuWidth - 12;
     if (left < 12) left = 12;
@@ -178,7 +185,8 @@ class _MapPageState extends State<MapPage> {
   Widget _buildFactoryGroupButtonsHorizontal() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.only(right: 8),
+      // 좌우 여백을 넉넉하게
+      padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: factoryBuildings.keys.map((group) {
           final isSelected = group == selectedFactoryGroup;
@@ -190,9 +198,15 @@ class _MapPageState extends State<MapPage> {
                   backgroundColor: isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
                   foregroundColor: Colors.black,
                   shape: const StadiumBorder(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  minimumSize: const Size(0, 36),
+                  // 버튼을 살짝 더 작게: 내부 패딩 축소
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  // 살짝 압축된 밀도
+                  visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
+                  // 최소 높이 축소
+                  minimumSize: const Size(0, _factoryBtnHeight),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  // 글자 크기도 약간만 줄여 슬림하게
+                  textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 onPressed: () => _openBuildingMenuForGroup(group, buttonContext),
                 child: Text(group, overflow: TextOverflow.ellipsis),
@@ -276,7 +290,12 @@ class _MapPageState extends State<MapPage> {
         elevation: 0.5,
         automaticallyImplyLeading: false,
         titleSpacing: 0,
-        title: _buildFactoryGroupButtonsHorizontal(),
+        // 버튼 라인을 더 아래로: 기본 높이 + _topGap
+        toolbarHeight: kToolbarHeight + _topGap,
+        title: Align(
+          alignment: Alignment.bottomLeft,
+          child: _buildFactoryGroupButtonsHorizontal(),
+        ),
       ),
       body: Stack(
         children: [
