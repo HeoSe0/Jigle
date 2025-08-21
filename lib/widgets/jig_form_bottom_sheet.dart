@@ -419,6 +419,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,          // ← 배경 흰색
+        surfaceTintColor: Colors.white,         // ← M3 틴트 제거(회색 끼 방지)
         titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
         contentPadding: const EdgeInsets.all(8),
         title: Row(
@@ -435,21 +437,25 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
             ),
           ],
         ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
-          child: InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4.0,
-            child: Image.asset(
-              widget.sizeGuideAssetPath,
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.low,
+        content: Container(                     // ← 안쪽도 확실히 흰 배경
+          color: Colors.white,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.asset(
+                widget.sizeGuideAssetPath,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.low,
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
 
   // ---- 제출 전 검증 (필수 항목) ----
   bool _validateAndMarkErrors() {
