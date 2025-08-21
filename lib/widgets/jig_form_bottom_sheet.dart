@@ -1259,8 +1259,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
           if (hasSelection)
             TextButton.icon(
               onPressed: _clearBaekSelection,
-              icon: const Icon(Icons.refresh, size: 16),
-              label: const Text('초기화'),
+              icon: const Icon(Icons.refresh, size: 16, color: Colors.red),
+              label: const Text('초기화', style: TextStyle(color: Colors.red)),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
