@@ -69,8 +69,8 @@ class _WarehouseTabsScreenState extends State<WarehouseTabsScreen> with SingleTi
         actions: [
           TextButton.icon(
             onPressed: _openMapForCurrentTab,
-            icon: const Icon(Icons.map_outlined),
-            label: const Text('지도 보기'),
+            icon: const Icon(Icons.map_outlined, color: Colors.black),
+            label: const Text('지도 보기', style: const TextStyle (color: Colors.black)),
           ),
           const SizedBox(width: 4),
         ],
