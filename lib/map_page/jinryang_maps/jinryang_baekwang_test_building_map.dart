@@ -377,6 +377,8 @@ class _JinryangBaekwangTestBuildingMapState
         return StatefulBuilder(
           builder: (dctx, setSB) {
             return AlertDialog(
+              backgroundColor: Colors.white,   // ← 추가
+              surfaceTintColor: Colors.white,  // ← 추가 (Material3 틴트 제거)
               titlePadding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
               title: Row(
@@ -475,18 +477,20 @@ class _JinryangBaekwangTestBuildingMapState
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 4, 8),
                   child: TextButton(
+                    style: TextButton.styleFrom(foregroundColor: Colors.black), // ← 추가
                     onPressed: () {
                       Navigator.pop(dctx);
                       _openAddJig(slot: slot, floor: selectedFloor);
                     },
-                    child: const Text('+ 지그 등록'),
+                    child: const Text('+ 지그 등록', style: TextStyle(color: Colors.black)),
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 0, 16, 8),
                   child: TextButton(
+                      style: TextButton.styleFrom(foregroundColor: Colors.black), // ← 추가
                       onPressed: () => Navigator.pop(dctx),
-                      child: const Text('돌아가기')),
+                      child: const Text('돌아가기', style: TextStyle(color: Colors.black))),
                 ),
               ],
             );
@@ -785,7 +789,7 @@ class _BaekJigDetailPanel extends StatelessWidget {
             color: Colors.transparent,
             child:
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              TextButton(onPressed: onBack, child: const Text('돌아가기')),
+              TextButton(onPressed: onBack, child: const Text('돌아가기', style: TextStyle(color: Colors.black))),
             ]),
           ),
         ],
