@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../my_jig_page/my_jig_screen.dart';
 import '../my_jig_page/my_sample_screen.dart';
-import '../my_jig_page/warehouse_tabs_screen.dart'; // ✅ 탭 컨테이너
+import '../my_jig_page/warehouse_tabs_screen.dart';
 import '../my_jig_page/admin_screen.dart';
 import '../my_jig_page/recent_screen.dart';
 import '../my_jig_page/event_screen.dart';
@@ -16,7 +16,7 @@ import '../widgets/jig_form_bottom_sheet.dart';
 class MyJigsPage extends StatelessWidget {
   const MyJigsPage({
     super.key,
-    required this.likedItems,
+    required this.likedItems,          // (다른 화면에서 쓸 수 있으니 유지)
     required this.jigsNotifier,
   });
 
@@ -35,24 +35,20 @@ class MyJigsPage extends StatelessWidget {
             children: [
               const ProfileHeader(),
               const SizedBox(height: 8),
-              // 🔧 리스트에서 const 제거 (동적 파라미터 전달 필요)
               MenuGrid(
-                items: [
-                  const _MenuSpec('나의 지그', MyJigScreen()),
-                  const _MenuSpec('나의 샘플', MySampleScreen()),
-                  // ✅ 전역 지그 목록을 탭 화면에 주입
-                  const _MenuSpec('창고 현황', WarehouseTabsScreen()),
-                  const _MenuSpec('관리자 설정', AdminScreen()),
+                items: const [
+                  _MenuSpec('나의 지그', MyJigScreen()),
+                  _MenuSpec('나의 샘플', MySampleScreen()),
+                  _MenuSpec('창고 현황', WarehouseTabsScreen()),
+                  _MenuSpec('관리자 설정', AdminScreen()),
                 ],
               ),
               const SizedBox(height: 6),
               QuickActions(
+                // ✅ 관심목록은 전역 notifier만 넘기고 내부에서 실시간 필터
                 onTapLiked: () => _push(
                   context,
-                  LikedJigsScreen(
-                    likedItems: likedItems,
-                    jigsNotifier: jigsNotifier,
-                  ),
+                  LikedJigsScreen(jigsNotifier: jigsNotifier),
                 ),
                 onTapRecent: () => _push(context, const RecentScreen()),
                 onTapEvent: () => _push(context, const EventScreen()),
@@ -91,7 +87,10 @@ class ProfileHeader extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           const Expanded(
-            child: Text('프로필', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            child: Text(
+              '프로필',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
           ),
           IconButton(icon: const Icon(Icons.chevron_right), onPressed: () {}),
         ],
@@ -118,7 +117,8 @@ class MenuGrid extends StatelessWidget {
           mainAxisSpacing: 16,
           childAspectRatio: 4,
         ),
-        itemBuilder: (_, i) => _MenuButton(label: items[i].label, target: items[i].screen),
+        itemBuilder: (_, i) =>
+            _MenuButton(label: items[i].label, target: items[i].screen),
       ),
     );
   }
@@ -132,7 +132,8 @@ class _MenuButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _CardButton(
-      onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => target)),
+      onTap: () =>
+          Navigator.of(context).push(MaterialPageRoute(builder: (_) => target)),
       child: Center(child: Text(label, style: const TextStyle(fontSize: 16))),
     );
   }
@@ -238,11 +239,9 @@ class _CardButton extends StatelessWidget {
 class LikedJigsScreen extends StatefulWidget {
   const LikedJigsScreen({
     super.key,
-    required this.likedItems,
     required this.jigsNotifier,
   });
 
-  final List<JigItemData> likedItems;
   final ValueListenable<List<JigItemData>> jigsNotifier;
 
   @override
@@ -250,16 +249,17 @@ class LikedJigsScreen extends StatefulWidget {
 }
 
 class _LikedJigsScreenState extends State<LikedJigsScreen> {
-  late final ValueNotifier<List<JigItemData>> _likedVN =
-  ValueNotifier<List<JigItemData>>(List<JigItemData>.from(widget.likedItems));
+  // ---- id helpers ----
+  int _indexById(List<JigItemData> list, String id) =>
+      list.indexWhere((e) => e.id == id);
 
   JigItemData _withPreservedLike({
     required JigItemData edited,
     required JigItemData old,
   }) =>
-      edited.copyWith(likes: old.likes, isLiked: old.isLiked);
+      edited.copyWith(id: old.id, likes: old.likes, isLiked: old.isLiked);
 
-  void _openEdit(BuildContext context, JigItemData item, int index) {
+  void _openEdit(BuildContext context, JigItemData item) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -270,34 +270,39 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
       builder: (_) => JigFormBottomSheet(
         editItem: item,
         onSubmit: (newJig) {
-          final updated = _withPreservedLike(edited: newJig, old: item);
-
-          // 1) 관심목록(로컬) 갱신
-          final list = List<JigItemData>.from(_likedVN.value);
-          list[index] = updated;
-          _likedVN.value = list;
-
-          // 2) 전체 목록 동기화 (가능한 경우)
           final ln = widget.jigsNotifier;
           if (ln is ValueNotifier<List<JigItemData>>) {
             final all = List<JigItemData>.from(ln.value);
-            int gi = all.indexOf(item);
-            if (gi == -1) {
-              gi = all.indexWhere((e) =>
-              e.title == item.title &&
-                  e.location == item.location &&
-                  e.registrant == item.registrant);
-            }
+            final gi = _indexById(all, item.id);
             if (gi != -1) {
-              all[gi] = _withPreservedLike(edited: newJig, old: all[gi]);
-              ln.value = all;
+              // id 보존 + 좋아요 상태 보존
+              all[gi] = _withPreservedLike(edited: newJig.copyWith(id: item.id), old: all[gi]);
+              ln.value = all; // ✅ 전역 갱신 → 아래 ValueListenableBuilder가 즉시 반영
             }
           }
-
           Navigator.pop(context);
         },
       ),
     );
+  }
+
+  // ❤️ 좋아요 토글: 전역 리스트만 갱신 (이 화면은 필터로 즉시 반영)
+  void _toggleLike(JigItemData item) {
+    final ln = widget.jigsNotifier;
+    if (ln is! ValueNotifier<List<JigItemData>>) return;
+
+    final all = List<JigItemData>.from(ln.value);
+    final gi = _indexById(all, item.id);
+    if (gi == -1) return;
+
+    final cur = all[gi];
+    final nowLike = !cur.isLiked;
+    final updated = cur.copyWith(
+      isLiked: nowLike,
+      likes: nowLike ? cur.likes + 1 : (cur.likes > 0 ? cur.likes - 1 : 0),
+    );
+    all[gi] = updated;
+    ln.value = all; // ✅ 전역 변경 → 관심목록은 필터링되므로 즉시 사라짐/추가됨
   }
 
   @override
@@ -310,9 +315,11 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
         iconTheme: const IconThemeData(color: Colors.black),
         title: const Text('관심 지그', style: TextStyle(color: Colors.black)),
       ),
+      // ✅ 전역/상위 jigsNotifier만 구독 → 실시간 필터
       body: ValueListenableBuilder<List<JigItemData>>(
-        valueListenable: _likedVN,
-        builder: (_, likedItems, __) {
+        valueListenable: widget.jigsNotifier,
+        builder: (_, all, __) {
+          final likedItems = all.where((e) => e.isLiked).toList(growable: false);
           if (likedItems.isEmpty) {
             return const _EmptyLikedState();
           }
@@ -323,8 +330,10 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
             itemBuilder: (_, index) {
               final item = likedItems[index];
               return Stack(
+                key: ValueKey('liked_${item.id}'), // ✅ 재활용 이슈 방지
                 children: [
                   JigItem(
+                    key: ValueKey(item.id),       // ✅ 재활용 이슈 방지
                     image: item.image,
                     title: item.title,
                     images: item.images,
@@ -336,6 +345,9 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
                     isLiked: item.isLiked,
                     storageDate: item.storageDate,
                     disposalDate: item.disposalDate,
+                    size: item.size,
+                    jigHeight: item.jigHeight,
+                    onLikePressed: () => _toggleLike(item),
                   ),
                   Positioned(
                     top: 0,
@@ -343,7 +355,7 @@ class _LikedJigsScreenState extends State<LikedJigsScreen> {
                     child: IconButton(
                       tooltip: '수정',
                       icon: const Icon(Icons.edit, color: Colors.black),
-                      onPressed: () => _openEdit(context, item, index),
+                      onPressed: () => _openEdit(context, item),
                     ),
                   ),
                 ],

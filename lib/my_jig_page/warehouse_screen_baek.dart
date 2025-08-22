@@ -111,33 +111,17 @@ void _showJigListBottomSheetBaek({
                       ],
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        // 전체
-                        FilterChip(
-                          label: const Text('전체'),
-                          selected: selectedFloors.isEmpty,
-                          onSelected: (_) => setSB(() => selectedFloors.clear()),
-                          // ▼ 색상 커스터마이즈
-                          backgroundColor: Colors.white,
-                          selectedColor: const Color(0xFFEDE7F6), // 선택 시 칩 배경
-                          showCheckmark: true,
-                          checkmarkColor: Colors.black,           // 체크 아이콘(✓) 색
-                          labelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
-                          shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
-                        ),
-                        for (final f in floorChoices)
+                  if (floorChoices.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
                           FilterChip(
-                            label: Text(f),
-                            selected: selectedFloors.contains(f),
-                            onSelected: (sel) => setSB(() {
-                              if (sel) { selectedFloors.add(f); } else { selectedFloors.remove(f); }
-                            }),
-                            // ▼ 동일한 스타일
+                            label: const Text('전체'),
+                            selected: selectedFloors.isEmpty,
+                            onSelected: (_) => setSB(() => selectedFloors.clear()),
                             backgroundColor: Colors.white,
                             selectedColor: const Color(0xFFEDE7F6),
                             showCheckmark: true,
@@ -145,9 +129,23 @@ void _showJigListBottomSheetBaek({
                             labelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
                             shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
                           ),
-                      ],
+                          for (final f in floorChoices)
+                            FilterChip(
+                              label: Text(f),
+                              selected: selectedFloors.contains(f),
+                              onSelected: (sel) => setSB(() {
+                                if (sel) { selectedFloors.add(f); } else { selectedFloors.remove(f); }
+                              }),
+                              backgroundColor: Colors.white,
+                              selectedColor: const Color(0xFFEDE7F6),
+                              showCheckmark: true,
+                              checkmarkColor: Colors.black,
+                              labelStyle: const TextStyle(color: Colors.black, fontWeight: FontWeight.w700),
+                              shape: const StadiumBorder(side: BorderSide(color: Colors.black26)),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
                   const Divider(height: 1),
                   Expanded(
                     child: ListView.separated(
@@ -167,7 +165,7 @@ void _showJigListBottomSheetBaek({
                           registrant: it.registrant,
                           likes: it.likes,
                           isLiked: it.isLiked,
-                          onLikePressed: () {},
+                          onLikePressed: () => JigsStore.toggleLike(it), // ✅ 전역 좋아요 토글
                           storageDate: it.storageDate,
                           disposalDate: it.disposalDate,
                           size: it.size,
@@ -216,7 +214,18 @@ class WarehouseScreenEmbeddedBaek extends StatelessWidget {
                     title: '${s.shelf} 전체',
                     baseFilter: (it) => _parentOf(it.location) == kPlantBaek && _slotOf(it.location) == s.shelf,
                     itemsListenable: listenable,
-                    floorChoices: const ['1층', '2층', '3층', '4층'], // ✅ 1~4층
+                    floorChoices: const ['1층', '2층', '3층', '4층'],
+                  ),
+                  // ✅ 층 클릭 시 해당 층만 필터된 목록
+                  onFloorDetail: (floor) => _showJigListBottomSheetBaek(
+                    context: context,
+                    title: '${s.shelf} $floor',
+                    baseFilter: (it) =>
+                    _parentOf(it.location) == kPlantBaek &&
+                        _slotOf(it.location) == s.shelf &&
+                        _floorOf(it.location) == floor,
+                    itemsListenable: listenable,
+                    floorChoices: const [], // 특정 층 모드 → 토글 숨김
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -241,11 +250,12 @@ class WarehouseScreenEmbeddedBaek extends StatelessWidget {
   }
 }
 
-/* ------------------ 카드 (오직 '자세히' 버튼) ------------------ */
+/* ------------------ 카드 (층 탭 가능 + '자세히') ------------------ */
 class _BaekShelfCard extends StatelessWidget {
-  const _BaekShelfCard({required this.status, this.onDetail});
+  const _BaekShelfCard({required this.status, this.onDetail, this.onFloorDetail});
   final BaekShelfStatus status;
   final VoidCallback? onDetail;
+  final void Function(String floor)? onFloorDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -253,30 +263,33 @@ class _BaekShelfCard extends StatelessWidget {
     final barColor = _progressColor(cap);
     final barBg = Colors.black.withOpacity(0.06);
 
-    Widget _floorBox(String label, int v, int max) => Expanded(
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: null,
-          borderRadius: BorderRadius.circular(12),
-          child: Ink(
-            decoration: BoxDecoration(
-              color: _colorForRatio((v / max).clamp(0, 1)),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.black.withOpacity(0.06)),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(label, style: const TextStyle(fontSize: 12,fontWeight: FontWeight.w800)),
-                const SizedBox(height: 6),
-                Text('$v / $max', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w600)),
-              ],
+    Widget _floorBox(String label, int v, int max) {
+      final safeMax = max == 0 ? 1 : max;
+      return Expanded(
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onFloorDetail == null ? null : () => onFloorDetail!(label),
+            borderRadius: BorderRadius.circular(12),
+            child: Ink(
+              decoration: BoxDecoration(
+                color: _colorForRatio((v / safeMax).clamp(0, 1)),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.black.withOpacity(0.06)),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 6),
+                  Text('$v / $max', style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.w600)),
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
+      );
+    }
 
     return Material(
       elevation: 1,
@@ -301,7 +314,7 @@ class _BaekShelfCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(color: barColor.withOpacity(0.12), borderRadius: BorderRadius.circular(999)),
-                  child: Text('${(cap * 100).round()}%', style: TextStyle(fontSize: 10,fontWeight: FontWeight.w800, color: barColor)),
+                  child: Text('${(cap * 100).round()}%', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: barColor)),
                 ),
               ]),
               const SizedBox(height: 10),
@@ -322,9 +335,7 @@ class _BaekShelfCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.black, // ← 글자+아이콘 색
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.black),
                   onPressed: onDetail,
                   icon: const Icon(Icons.list_alt, color: Colors.black),
                   label: const Text('자세히', style: TextStyle(color: Colors.black)),

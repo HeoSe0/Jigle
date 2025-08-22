@@ -89,8 +89,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   String? baekSlot;
   String? baekFloor;
 
-  DateTime? startDate;
-  DateTime? endDate;
+  DateTime? startDate; // 보관
+  DateTime? endDate; // 폐기
 
   final List<String> _images = <String>[];
   int _thumbIndex = 0;
@@ -257,44 +257,51 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
   // ---- 공용 ----
   void _toast(String msg) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), behavior: SnackBarBehavior.floating),
     );
   }
 
+  // ---- 날짜 선택(역순 금지) ----
   Future<void> _pickDate({required bool isStart}) async {
     final now = DateTime.now();
-    final initial = (isStart ? startDate : endDate) ?? now;
+    final baseFirst = DateTime(now.year - 5);
+    final baseLast = DateTime(now.year + 5);
+
+    final initial = isStart
+        ? (startDate ?? endDate ?? now)
+        : (endDate ?? startDate ?? now);
+
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 5),
+      firstDate: isStart ? baseFirst : (startDate ?? baseFirst),
+      lastDate: baseLast,
       helpText: isStart ? '보관 날짜 선택' : '폐기 날짜 선택',
+      selectableDayPredicate: (day) {
+        if (!isStart && startDate != null) {
+          final s = DateTime(startDate!.year, startDate!.month, startDate!.day);
+          return !day.isBefore(s); // 보관일 이전 비활성화
+        }
+        return true;
+      },
       builder: (context, child) {
         final base = Theme.of(context);
         return Theme(
           data: base.copyWith(
-            // 다이얼로그 배경
             dialogBackgroundColor: Colors.white,
-
-            // 달력의 포커스/선택 색(원하는 색으로 조정 가능)
             colorScheme: base.colorScheme.copyWith(
-              primary: Colors.blue.shade400,   // 상단 헤더 & 선택된 날짜 색
-              onPrimary: Colors.white,         // 위에 올 텍스트 색
-              onSurface: Colors.black,         // 본문 텍스트 색
+              primary: Colors.blue.shade400,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
             ),
-
-            // 확인/취소 버튼 색
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
                 foregroundColor: Colors.blue.shade400,
               ),
             ),
-
-            // (Material 3 사용하는 경우 추가로 안전하게)
             datePickerTheme: const DatePickerThemeData(
-              // Flutter 버전에 따라 지원될 수도, 안될 수도 있습니다.
               backgroundColor: Colors.white,
             ),
           ),
@@ -304,14 +311,23 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     );
 
     if (picked == null) return;
+
+    // 방어: 역순 금지
+    if (!isStart && startDate != null && picked.isBefore(startDate!)) {
+      _toast('폐기 날짜는 보관 날짜 이후로만 선택할 수 있어요.');
+      return;
+    }
+
     setState(() {
+      final d = DateTime(picked.year, picked.month, picked.day);
       if (isStart) {
-        startDate = DateTime(picked.year, picked.month, picked.day);
-        if (endDate != null && endDate!.isBefore(startDate!)) {
-          endDate = startDate;
+        startDate = d;
+        if (endDate != null && endDate!.isBefore(d)) {
+          endDate = d; // 자동 보정
+          _toast('폐기 날짜가 보관 날짜보다 빠를 수 없어 동일 날짜로 맞췄습니다.');
         }
       } else {
-        endDate = DateTime(picked.year, picked.month, picked.day);
+        endDate = d;
       }
     });
   }
@@ -342,6 +358,19 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
   bool get _isHeightSelectionAllowed {
     if (jigHeight == null) return true; // 미선택은 경고 미표시(필수 검사는 별도)
     return _allowedHeights().contains(jigHeight);
+  }
+
+  // ⚠️ 경고문은 String? 으로 계산 (UI에서 Text로 감싼다)
+  String? get _heightWarningText {
+    String? slot, floor;
+    if (location == '진량공장 B동') {
+      slot = bDongSlot;
+      floor = bDongFloor;
+    } else if (location == '배광시험동 2층') {
+      slot = baekSlot;
+      floor = baekFloor;
+    }
+    return JigItemData.resolveHeightWarning(location, slot, floor, jigHeight);
   }
 
   // ---- 필수 항목 로직(게터) ----
@@ -419,8 +448,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       context: context,
       barrierDismissible: true,
       builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,          // ← 배경 흰색
-        surfaceTintColor: Colors.white,         // ← M3 틴트 제거(회색 끼 방지)
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
         titlePadding: const EdgeInsets.fromLTRB(16, 12, 8, 0),
         contentPadding: const EdgeInsets.all(8),
         title: Row(
@@ -437,7 +466,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
             ),
           ],
         ),
-        content: Container(                     // ← 안쪽도 확실히 흰 배경
+        content: Container(
           color: Colors.white,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 720, maxHeight: 900),
@@ -455,7 +484,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       ),
     );
   }
-
 
   // ---- 제출 전 검증 (필수 항목) ----
   bool _validateAndMarkErrors() {
@@ -521,6 +549,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
     // 높이/슬롯/층 필수 검증
     final okRequired = _validateAndMarkErrors();
 
+    // 날짜 최종 검증(방어 로직)
+    if (startDate != null && endDate != null && endDate!.isBefore(startDate!)) {
+      _toast('폐기 날짜는 보관 날짜 이후여야 합니다.');
+      return;
+    }
+
     // 하나라도 에러면 등록 차단
     if (_titleError || !okRequired) {
       if (_heightError) {
@@ -537,7 +571,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
 
     // 선택이 규칙에 어긋나더라도(허용 외 높이) 등록은 허용
     if (!_isHeightSelectionAllowed) {
-      _toast('지그 높이 때문에 보관이 어려울 수 있습니다. 그래도 등록합니다.');
+      _toast('지그 높이 때문에 보관이 어려울 수 있습니다. 직접 확인이 필요합니다. 그래도 등록합니다.');
     }
 
     final String finalLocation = _buildLocationString();
@@ -558,10 +592,12 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         ? finalImages[finalThumbIndex]
         : (widget.editItem?.image ?? 'assets/sample_box1.png');
 
+    // ✅ 편집 모드일 때는 기존 id/좋아요 상태 유지
     final newJig = JigItemData(
+      id: widget.editItem?.id,                 // 유지
       image: finalThumb,
-      images: finalImages,            // ✅ 여러 장 함께 저장
-      thumbnailIndex: finalThumbIndex, // ✅ 대표 인덱스 저장
+      images: finalImages,
+      thumbnailIndex: finalThumbIndex,
       title: trimmedTitle,
       location: finalLocation,
       description: descriptionController.text.trim(),
@@ -570,10 +606,9 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
       disposalDate: endDate,
       size: jigSize,
       jigHeight: jigHeight,
+      likes: widget.editItem?.likes ?? 0,      // 유지
+      isLiked: widget.editItem?.isLiked ?? false, // 유지
     );
-
-    // debug용: 제출 페이로드 점검
-    // debugPrint('payload: ${newJig.toJson()}');
 
     widget.onSubmit(newJig);
     Navigator.pop(context);
@@ -645,19 +680,19 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
         child: Text('썸네일 미리보기 없음',
             style: TextStyle(color: Colors.black54)));
 
+    // 높이 경고 문구(String, 9pt) 미리 계산
+    final String? heightWarnText = _heightWarningText;
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       child: Material(
         color: Colors.white,
-
-        /// ✅ 상단 상태바·노치만큼 안전 여백을 확보
         child: SafeArea(
           top: true,
           bottom: false,
           left: false,
           right: false,
           child: Padding(
-            // 키보드가 올라올 때만 하단 여백 추가
             padding: EdgeInsets.only(bottom: keyboard, top: 8),
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomSafe),
@@ -668,7 +703,6 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   // 상단 툴바
                   Row(
                     children: [
-                      // 뒤로가기
                       IconButton(
                         tooltip: '뒤로가기',
                         onPressed: () => Navigator.maybePop(context),
@@ -686,8 +720,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           backgroundColor: Colors.blue.shade100,
                           foregroundColor: Colors.black,
                           minimumSize: const Size(0, 40),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           shape: const StadiumBorder(),
                         ),
                         onPressed: _pickFromGallery,
@@ -702,8 +736,8 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                           backgroundColor: Colors.green.shade100,
                           foregroundColor: Colors.black,
                           minimumSize: const Size(0, 40),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                           shape: const StadiumBorder(),
                         ),
                         onPressed: _pickFromCamera,
@@ -727,8 +761,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: heroPreview),
+                        borderRadius: BorderRadius.circular(10), child: heroPreview),
                   ),
 
                   // 썸네일 그리드
@@ -849,8 +882,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text("지그 사이즈",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("지그 사이즈", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 8,
@@ -885,7 +917,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                             child: _errorPill('지그 높이를 선택해주세요.'),
                           ),
                         )
-                      else if (!_isHeightSelectionAllowed)
+                      else if (heightWarnText != null)
                         Expanded(
                           child: Align(
                             alignment: Alignment.centerLeft,
@@ -899,18 +931,21 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(Icons.warning_amber_rounded,
-                                      size: 16, color: Color(0xFF8A6D3B)),
-                                  SizedBox(width: 6),
+                                children: [
+                                  const Icon(Icons.warning_amber_rounded,
+                                      size: 17, color: Color(0xFF8A6D3B)),
+                                  const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
-                                      '지그 높이 때문에 보관이 어려울 수 있습니다.',
-                                      style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF8A6D3B)),
+                                      heightWarnText,
+                                      style: const TextStyle(
+                                        fontSize: 9.0, // 전체적으로 작게(9pt)
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF8A6D3B),
+                                        height: 1.1,
+                                      ),
                                       overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
                                     ),
                                   ),
                                 ],
@@ -964,8 +999,7 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   ),
 
                   const SizedBox(height: 16),
-                  const Text("보관 장소",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("보관 장소", style: TextStyle(fontWeight: FontWeight.bold)),
                   Wrap(
                     spacing: 8,
                     children: _locations.map((place) {
@@ -976,11 +1010,15 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                         onSelected: (_) => setState(() {
                           location = place;
                           if (location == '진량공장 B동') {
+                            bDongSlot = null;
+                            bDongFloor = null;
                             baekSlot = null;
                             baekFloor = null;
                           } else if (location == '배광시험동 2층') {
                             bDongSlot = null;
                             bDongFloor = null;
+                            baekSlot = null;
+                            baekFloor = null;
                           } else {
                             bDongSlot = null;
                             bDongFloor = null;
@@ -1171,21 +1209,22 @@ class _JigFormBottomSheetState extends State<JigFormBottomSheet> {
                   const Divider(height: 1),
 
                   const SizedBox(height: 12),
-                  const Text("보관 기한",
-                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text("보관 기한", style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       OutlinedButton.icon(
                         onPressed: () => _pickDate(isStart: true),
                         icon: Icon(Icons.calendar_today, color: Colors.blue.shade400),
-                        label: Text(_dateLabel(startDate, '보관 날짜'), style: const TextStyle (color: Colors.black)),
+                        label: Text(_dateLabel(startDate, '보관 날짜'),
+                            style: const TextStyle(color: Colors.black)),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
                         onPressed: () => _pickDate(isStart: false),
                         icon: Icon(Icons.event_busy, color: Colors.blue.shade400),
-                        label: Text(_dateLabel(endDate, '폐기 날짜'), style: const TextStyle (color: Colors.black)),
+                        label: Text(_dateLabel(endDate, '폐기 날짜'),
+                            style: const TextStyle(color: Colors.black)),
                       ),
                     ],
                   ),

@@ -13,11 +13,10 @@ import '../map_page/jinryang_maps/jinryang_main_building_map.dart';
 import '../map_page/jinryang_maps/jinryang_production_tech_center_map.dart';
 import '../map_page/jinryang_maps/jinryang_singwan_map.dart';
 import '../widgets/jig_item_data.dart';
+import '../data/jigs_store.dart'; // 🔴 단일 소스
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key, required this.jigsNotifier});
-
-  /// 전체 지그 리스트(지도와 포화도/카드 연동에 사용)
   final ValueListenable<List<JigItemData>> jigsNotifier;
 
   @override
@@ -26,8 +25,8 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   // ───── 상단 버튼/여백 규격 ─────
-  static const double _factoryBtnHeight = 32.0; // 버튼 살짝 더 작게
-  static const double _topGap = 26.0;           // 버튼 라인 바닥 정렬용 여백
+  static const double _factoryBtnHeight = 32.0;
+  static const double _topGap = 26.0;
 
   String selectedFactoryGroup = 'SL 진량 본사';
   String? selectedBuilding;
@@ -49,6 +48,23 @@ class _MapPageState extends State<MapPage> {
     'SL 안산공장': ['공장1', '공장2'],
     'SL 성산공장': ['공장1', '공장2'],
   };
+
+  @override
+  void initState() {
+    super.initState();
+    // 🔴 상위 노티파이어 ↔ 전역 스토어를 미러로 묶기
+    if (widget.jigsNotifier is ValueNotifier<List<JigItemData>>) {
+      JigsStore.attachMirror(widget.jigsNotifier as ValueNotifier<List<JigItemData>>);
+    }
+  }
+
+  @override
+  void dispose() {
+    if (widget.jigsNotifier is ValueNotifier<List<JigItemData>>) {
+      JigsStore.detachMirror(widget.jigsNotifier as ValueNotifier<List<JigItemData>>);
+    }
+    super.dispose();
+  }
 
   void _goBack() => setState(() => selectedBuilding = null);
   void _selectBuilding(String building) => setState(() => selectedBuilding = building);
@@ -72,9 +88,7 @@ class _MapPageState extends State<MapPage> {
       pageBuilder: (_, __, ___) {
         return Stack(
           children: [
-            Positioned.fill(
-              child: GestureDetector(onTap: () => Navigator.of(context).pop()),
-            ),
+            Positioned.fill(child: GestureDetector(onTap: () => Navigator.of(context).pop())),
             Positioned(
               left: left,
               top: top,
@@ -87,9 +101,7 @@ class _MapPageState extends State<MapPage> {
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.95),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: const [
-                      BoxShadow(blurRadius: 8, color: Colors.black12, offset: Offset(0, 2)),
-                    ],
+                    boxShadow: const [BoxShadow(blurRadius: 8, color: Colors.black12, offset: Offset(0, 2))],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -103,13 +115,8 @@ class _MapPageState extends State<MapPage> {
                           child: Row(
                             children: [
                               Container(
-                                width: 24,
-                                height: 24,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
+                                width: 24, height: 24, alignment: Alignment.center,
+                                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
                                 child: Text('${i + 1}', style: const TextStyle(fontWeight: FontWeight.w600)),
                               ),
                               const SizedBox(width: 8),
@@ -144,9 +151,7 @@ class _MapPageState extends State<MapPage> {
     final buttonBottom = buttonTopLeft.dy + buttonBox.size.height;
 
     const desiredWidth = 240.0;
-    final menuWidth = desiredWidth
-        .clamp(200.0, overlaySize.width - 24)
-        .toDouble(); // 타입 안정성
+    final menuWidth = desiredWidth.clamp(200.0, overlaySize.width - 24).toDouble();
 
     double left = buttonTopLeft.dx;
     if (left + menuWidth > overlaySize.width - 12) left = overlaySize.width - menuWidth - 12;
@@ -185,7 +190,6 @@ class _MapPageState extends State<MapPage> {
   Widget _buildFactoryGroupButtonsHorizontal() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      // 좌우 여백을 넉넉하게
       padding: const EdgeInsets.symmetric(horizontal: 14),
       child: Row(
         children: factoryBuildings.keys.map((group) {
@@ -198,14 +202,10 @@ class _MapPageState extends State<MapPage> {
                   backgroundColor: isSelected ? Colors.grey.shade700 : Colors.grey.shade300,
                   foregroundColor: Colors.black,
                   shape: const StadiumBorder(),
-                  // 버튼을 살짝 더 작게: 내부 패딩 축소
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  // 살짝 압축된 밀도
                   visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
-                  // 최소 높이 축소
                   minimumSize: const Size(0, _factoryBtnHeight),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  // 글자 크기도 약간만 줄여 슬림하게
                   textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 onPressed: () => _openBuildingMenuForGroup(group, buttonContext),
@@ -217,6 +217,9 @@ class _MapPageState extends State<MapPage> {
       ),
     );
   }
+
+  // (호환용) 이전 코드에서 사용한 이름이 있을 수 있어 래퍼를 추가
+  Widget buildFactoryGroupButtonsHorizontal() => _buildFactoryGroupButtonsHorizontal();
 
   // ───────────────── 지도 콘텐츠 ─────────────────
   Widget _buildMapContent() {
@@ -232,21 +235,14 @@ class _MapPageState extends State<MapPage> {
 
     switch (selectedBuilding) {
       case '진량공장 B동':
-        return ValueListenableBuilder<List<JigItemData>>(
-          valueListenable: widget.jigsNotifier,
-          builder: (_, items, __) {
-            return JinryangBDongMap(
-              onBack: _goBack,
-              allItems: items,
-              // 포화도 상한(대형 2개 = 10 → 빠르게 빨강)
-              maxCapacityShelves: 10,
-              maxCapacityF: 10,
-              // size → 1/3/5 가중치
-              weightOfItem: (it) => it.capacityWeight,
-            );
-          },
+        return JinryangBDongMap(
+          onBack: _goBack,
+          jigsListenable: JigsStore.notifier,
+          allItems: JigsStore.items,
+          maxCapacityShelves: 10,
+          maxCapacityF: 10,
+          weightOfItem: (it) => it.capacityWeight,
         );
-
       case '진량공장 A동':
         return JinryangADongMap(onBack: _goBack);
       case '본관':
@@ -261,20 +257,14 @@ class _MapPageState extends State<MapPage> {
         return JinryangAdasCenterMap(onBack: _goBack);
       case '중앙시험동':
         return JinryangCentralTestBuildingMap(onBack: _goBack);
-
       case '배광시험동':
-        return ValueListenableBuilder<List<JigItemData>>(
-          valueListenable: widget.jigsNotifier,
-          builder: (_, items, __) {
-            return JinryangBaekwangTestBuildingMap(
-              onBack: _goBack,
-              allItems: items,                 // 지그 리스트 연동
-              maxCapacityPerFloor: 10,         // 층 버튼 색상 상한
-              weightOfItem: (it) => it.capacityWeight,
-            );
-          },
+        return JinryangBaekwangTestBuildingMap(
+          onBack: _goBack,
+          jigsListenable: JigsStore.notifier,
+          allItems: JigsStore.items,
+          maxCapacityPerFloor: 10,
+          weightOfItem: (it) => it.capacityWeight,
         );
-
       default:
         return Center(child: Text('$selectedBuilding 지도는 준비 중입니다.'));
     }
@@ -290,18 +280,13 @@ class _MapPageState extends State<MapPage> {
         elevation: 0.5,
         automaticallyImplyLeading: false,
         titleSpacing: 0,
-        // 버튼 라인을 더 아래로: 기본 높이 + _topGap
         toolbarHeight: kToolbarHeight + _topGap,
         title: Align(
           alignment: Alignment.bottomLeft,
-          child: _buildFactoryGroupButtonsHorizontal(),
+          child: _buildFactoryGroupButtonsHorizontal(), // ✅ 존재하는 메서드 호출
         ),
       ),
-      body: Stack(
-        children: [
-          Positioned.fill(child: _buildMapContent()),
-        ],
-      ),
+      body: Stack(children: [Positioned.fill(child: _buildMapContent())]),
     );
   }
 }

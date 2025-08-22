@@ -180,16 +180,20 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     }
   }
 
+  // ------- id 유틸 -------
+  int _indexById(List<JigItemData> list, String id) =>
+      list.indexWhere((e) => e.id == id);
+
   // ------- 좋아요 보존 유틸 -------
   JigItemData _withPreservedLike({
     required JigItemData edited,
     required JigItemData old,
   }) =>
-      edited.copyWith(likes: old.likes, isLiked: old.isLiked);
+      edited.copyWith(id: old.id, likes: old.likes, isLiked: old.isLiked);
 
   void _replaceInLiked(JigItemData oldItem, JigItemData newItem) {
     final liked = List<JigItemData>.from(widget.likedItemsNotifier.value);
-    final li = liked.indexOf(oldItem);
+    final li = _indexById(liked, oldItem.id);
     if (li != -1) {
       liked[li] = newItem;
       widget.likedItemsNotifier.value = List<JigItemData>.from(liked);
@@ -216,15 +220,18 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
           final list = List<JigItemData>.from(JigsStore.notifier.value);
           setState(() {
             if (editIndex != null && editItem != null) {
-              final gi = list.indexOf(editItem);
+              final gi = _indexById(list, editItem.id);
               if (gi != -1) {
-                final updated =
-                _withPreservedLike(edited: newJig, old: list[gi]);
+                final updated = _withPreservedLike(
+                  edited: newJig.copyWith(id: list[gi].id),
+                  old: list[gi],
+                );
                 list[gi] = updated;
                 _replaceInLiked(editItem, updated);
                 _selectedLocation = _parentOf(updated.location);
               }
             } else {
+              // 새 항목은 모델에서 id 자동 생성된다고 가정
               list.insert(0, newJig);
               _selectedLocation = _parentOf(newJig.location);
             }
@@ -249,15 +256,17 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
             onPressed: () {
               final list = List<JigItemData>.from(JigsStore.notifier.value);
               setState(() {
-                // 인덱스는 필터링된 리스트 기준이라 안전하게 원본에서 찾아 삭제
-                final gi = list.indexOf(item);
+                final gi = _indexById(list, item.id);
                 if (gi != -1) {
                   final removed = list.removeAt(gi);
                   JigsStore.notifier.value = list;
 
+                  // 관심목록 스냅샷에서도 id 기준 제거
                   final liked =
                   List<JigItemData>.from(widget.likedItemsNotifier.value);
-                  if (liked.remove(removed)) {
+                  final li = _indexById(liked, removed.id);
+                  if (li != -1) {
+                    liked.removeAt(li);
                     widget.likedItemsNotifier.value =
                     List<JigItemData>.from(liked);
                   }
@@ -272,23 +281,36 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
     );
   }
 
+  // 🔴 좋아요 토글: 전역 → 관심목록 순으로 동기화(id 기준, 중복 방지)
   void _toggleLike(JigItemData item) {
-    setState(() {
-      final currentLiked =
-      List<JigItemData>.from(widget.likedItemsNotifier.value);
-      final alreadyLiked = currentLiked.contains(item);
+    // 1) 전역 목록에서 토글
+    final all = List<JigItemData>.from(JigsStore.notifier.value);
+    final gi = _indexById(all, item.id);
+    if (gi == -1) return;
+    final cur = all[gi];
+    final nowLike = !cur.isLiked;
+    final updated = cur.copyWith(
+      isLiked: nowLike,
+      likes: nowLike ? (cur.likes + 1) : (cur.likes > 0 ? cur.likes - 1 : 0),
+    );
+    all[gi] = updated;
+    JigsStore.notifier.value = all; // ✅ 전역 알림
 
-      if (!alreadyLiked) {
-        item.isLiked = true;
-        item.likes = item.likes + 1;
-        currentLiked.add(item);
+    // 2) 관심목록 스냅샷도 id 기준으로 동기화 (중복 방지)
+    final ln = widget.likedItemsNotifier;
+    final liked = List<JigItemData>.from(ln.value);
+    final li = _indexById(liked, updated.id);
+
+    if (nowLike) {
+      if (li == -1) {
+        liked.insert(0, updated);
       } else {
-        item.isLiked = false;
-        item.likes = item.likes > 0 ? item.likes - 1 : 0;
-        currentLiked.remove(item);
+        liked[li] = updated;
       }
-      widget.likedItemsNotifier.value = List<JigItemData>.from(currentLiked);
-    });
+    } else {
+      if (li != -1) liked.removeAt(li);
+    }
+    ln.value = liked;
   }
 
   // ------- B동 초기 포커스 추정 (최근 항목 기준) -------
@@ -475,12 +497,15 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
               itemBuilder: (_, index) {
                 final item = items[index];
                 // 전역 리스트에서의 실제 인덱스 (수정/삭제용)
-                final originIndex = JigsStore.notifier.value.indexOf(item);
+                final originIndex =
+                _indexById(JigsStore.notifier.value, item.id);
                 final effectiveIndex = originIndex >= 0 ? originIndex : index;
 
                 return Stack(
+                  key: ValueKey('wh_${item.id}'),
                   children: [
                     JigItem(
+                      key: ValueKey(item.id), // ✅ 재활용 이슈 방지
                       image: item.image,
                       images: item.images,
                       thumbnailIndex: item.thumbnailIndex,
@@ -510,7 +535,8 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
                           ),
                           IconButton(
                             icon: const Icon(Icons.close, color: Colors.black),
-                            onPressed: () => _confirmDelete(effectiveIndex, item),
+                            onPressed: () =>
+                                _confirmDelete(effectiveIndex, item),
                           ),
                         ],
                       ),
@@ -526,7 +552,7 @@ class _WarehouseJigsPageState extends State<WarehouseJigsPage> {
       // + 지그 등록
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddOrEditJigDialog(),
-        label: const Text('+ 지그 등록', style: const TextStyle (color: Colors.black)),
+        label: const Text('+ 지그 등록', style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
       ),
     );
