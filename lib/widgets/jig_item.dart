@@ -63,7 +63,16 @@ class _JigItemState extends State<JigItem> {
   void initState() {
     super.initState();
     final g = _gallery;
-    _current = g.isEmpty ? 0 : widget.thumbnailIndex.clamp(0, g.length - 1);
+
+    // clamp(num) → int 안전 처리
+    int initial = widget.thumbnailIndex;
+    if (g.isEmpty) {
+      initial = 0;
+    } else {
+      if (initial < 0) initial = 0;
+      if (initial >= g.length) initial = g.length - 1;
+    }
+    _current = initial;
     _pageController = PageController(initialPage: _current);
 
     _liked = widget.isLiked;
@@ -140,14 +149,18 @@ class _JigItemState extends State<JigItem> {
         ),
       );
     } else if (_isDataUrlSrc(src)) {
-      final comma = src.indexOf(',');
-      if (comma > 0) {
-        final b64 = src.substring(comma + 1);
-        final bytes = base64Decode(b64);
-        return ClipRRect(
-          borderRadius: radius ?? _thumbBorder,
-          child: Image.memory(bytes, width: width, height: height, fit: fit),
-        );
+      try {
+        final comma = src.indexOf(',');
+        if (comma > 0) {
+          final b64 = src.substring(comma + 1);
+          final bytes = base64Decode(b64);
+          return ClipRRect(
+            borderRadius: radius ?? _thumbBorder,
+            child: Image.memory(bytes, width: width, height: height, fit: fit),
+          );
+        }
+      } catch (_) {
+        // fall through to placeholder
       }
       return placeholder;
     } else {
@@ -191,7 +204,8 @@ class _JigItemState extends State<JigItem> {
 
   // 첫 토큰에서 부모 추출(토큰에 층이 붙어 있어도 제거)
   String _parentLocation(String loc) {
-    final first = _parts(loc).isNotEmpty ? _parts(loc)[0] : loc;
+    final p = _parts(loc);
+    final first = p.isNotEmpty ? p[0] : loc;
     return _stripTrailingFloor(first);
   }
 
@@ -212,6 +226,7 @@ class _JigItemState extends State<JigItem> {
   // 기본 정책은 모델의 공통 규칙에 위임
   List<String> _defaultHeightPolicy(String parent, String? slot, String? floor) {
     return JigItemData.resolveHeightOptions(parent, slot, floor);
+    // parent만 전달해도 내부에서 부모/층 정규화
   }
 
   bool get _isHeightAllowed {
@@ -587,7 +602,7 @@ class _JigItemState extends State<JigItem> {
 
                   const SizedBox(height: 6),
 
-                  // 좋아요 (상위 제스처 컨테이너 안에서도 잘 눌리도록 처리)
+                  // 좋아요
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -631,18 +646,17 @@ class _JigItemState extends State<JigItem> {
     // 좁은 폭에서 자동 스케일 다운
     const double kBaseWidthForScale = 420.0;
     return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxW = constraints.maxWidth;
-        if (maxW + 0.5 >= kBaseWidthForScale) return core;
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.topLeft,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kBaseWidthForScale),
-            child: core,
-          ),
-        );
-      },
-    );
+        builder: (context, constraints) {
+          final maxW = constraints.maxWidth;
+          if (maxW + 0.5 >= kBaseWidthForScale) return core;
+          return FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.topLeft,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: kBaseWidthForScale),
+              child: core,
+            ),
+          );
+        });
   }
 }

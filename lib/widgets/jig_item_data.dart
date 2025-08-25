@@ -28,8 +28,13 @@ class JigItemData {
 
   // ===== 내부: ID 생성기 =====
   static final Random _rand = Random();
-  static String _genId() =>
-      'j_${DateTime.now().microsecondsSinceEpoch}_${_rand.nextInt(1 << 32)}';
+  static const int _randMax = 0x3fffffff; // 2^30-1 (웹에서도 안전)
+  static String _genId() {
+    final t = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final r1 = _rand.nextInt(_randMax).toRadixString(36);
+    final r2 = _rand.nextInt(_randMax).toRadixString(36);
+    return 'j_${t}_$r1$r2';
+  }
 
   // ===== 유틸: 안전 파싱/정규화 =====
   static DateTime? _parseDate(dynamic v) {
@@ -133,13 +138,13 @@ class JigItemData {
   final List<String> images;
   final int thumbnailIndex;
   final String title;
-  final String location;         // 예: '진량공장 B동 / L1 / 2층' 또는 '배광시험동 2층 / R3 / 2층'
+  final String location;   // 예: '진량공장 B동 / L1 / 2층' 또는 '배광시험동 2층 / R3 / 2층'
   final String description;
   final String registrant;
   final DateTime? storageDate;
   final DateTime? disposalDate;
-  final String size;             // '소형' | '중형' | '대형'
-  final String? jigHeight;       // 선택: 지그 높이
+  final String size;       // '소형' | '중형' | '대형'
+  final String? jigHeight; // 선택: 지그 높이
 
   // ===== 좋아요 상태 (가변) =====
   int likes;
@@ -177,8 +182,10 @@ class JigItemData {
           final idx = _safeIndex(thumbnailIndex, normalized.length);
           return normalized.isNotEmpty ? normalized[idx] : image;
         })(),
-        assert(jigHeight == null || allowedHeights.contains(_norm(jigHeight)),
-        'jigHeight는 30cm 미만/50cm 미만/50cm 이상 중 하나여야 합니다.');
+        assert(
+        jigHeight == null || allowedHeights.contains(_norm(jigHeight)),
+        'jigHeight는 30cm 미만/50cm 미만/50cm 이상 중 하나여야 합니다.',
+        );
 
   JigItemData copyWith({
     String? id,
@@ -202,10 +209,8 @@ class JigItemData {
 
     final seedImage = image ?? this.image;
     final normalized = _normalizeImages(images ?? this.images, seedImage);
-    final safeThumb = _safeIndex(
-      thumbnailIndex ?? this.thumbnailIndex,
-      normalized.length,
-    );
+    final safeThumb =
+    _safeIndex(thumbnailIndex ?? this.thumbnailIndex, normalized.length);
     final rep = normalized.isNotEmpty ? normalized[safeThumb] : seedImage;
 
     return JigItemData(
@@ -264,10 +269,8 @@ class JigItemData {
     final parsed = _parseImagesFlexible(map['images']);
     final normalized = _normalizeImages(parsed, rawImage);
 
-    final safeThumb = _safeIndex(
-      _toInt(map['thumbnailIndex'], fallback: 0),
-      normalized.length,
-    );
+    final safeThumb =
+    _safeIndex(_toInt(map['thumbnailIndex'], fallback: 0), normalized.length);
 
     final rep = normalized.isNotEmpty
         ? normalized[safeThumb]
@@ -356,10 +359,6 @@ class JigItemData {
   }
 
   /// 현재 위치/슬롯/층/선택 높이에 대해 경고 문자열 계산
-  /// - 배광시험동/진량공장 B동(1~3층 L1/C1/R1)에서 `50cm 이상`이면
-  ///   → "현재 위치에서는 50cm 이상 지그 보관이 어려워요"
-  /// - 그 외 허용 외 높이일 경우
-  ///   → "현재 위치에서 허용되지 않는 높이일 수 있어요"
   static String? resolveHeightWarning(
       String location, String? slot, String? floor, String? jigHeight) {
     final jh = _norm(jigHeight);
